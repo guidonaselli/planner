@@ -1,18 +1,28 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ShiftService } from '../../services/shift.service';
 import { DateUtils } from '../../utils/date-utils';
 import { StaffMember, Shift } from '../../models/shift-planner.models';
+import { ShiftEditDialogComponent } from '../shift-edit-dialog/shift-edit-dialog.component';
+import { PersonDetailsDialogComponent } from '../person-details-dialog/person-details-dialog.component';
 
 @Component({
   selector: 'app-week-view',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ShiftEditDialogComponent, PersonDetailsDialogComponent],
   templateUrl: './week-view.component.html',
   styleUrls: ['./week-view.component.css']
 })
 export class WeekViewComponent {
   shiftService = inject(ShiftService);
+
+  // Dialog State
+  isDialogOpen = signal(false);
+  selectedShift = signal<Shift | null>(null);
+
+  // Person Details State
+  isPersonDialogOpen = signal(false);
+  selectedPerson = signal<StaffMember | null>(null);
 
   // Week Days Logic
   weekDays = computed(() => {
@@ -74,5 +84,99 @@ export class WeekViewComponent {
   isHoliday(date: Date): boolean {
     const dateStr = DateUtils.formatDate(date);
     return this.shiftService.holidays().some(h => h.date === dateStr);
+  }
+
+  // --- Interaction ---
+  onCellClick(date: Date, staffId: string) {
+    const newShift: Shift = {
+      id: crypto.randomUUID(),
+      staffId: staffId,
+      date: DateUtils.formatDate(date),
+      start: '08:00',
+      end: '16:00',
+      type: 'standard',
+      status: 'draft',
+      source: 'manual'
+    };
+    this.selectedShift.set(newShift);
+    this.isDialogOpen.set(true);
+  }
+
+  onShiftClick(event: MouseEvent, shift: Shift) {
+    event.stopPropagation();
+    this.selectedShift.set(shift);
+    this.isDialogOpen.set(true);
+  }
+
+  closeDialog() {
+    this.isDialogOpen.set(false);
+    this.selectedShift.set(null);
+  }
+
+  saveShift(data: Partial<Shift>) {
+    const current = this.selectedShift();
+    if (current) {
+      const exists = this.shiftService.shifts().some(s => s.id === current.id);
+      if (exists) {
+        this.shiftService.updateShift({ id: current.id, ...data });
+      } else {
+        const newShift = { ...current, ...data } as Shift;
+        this.shiftService.addShift(newShift);
+      }
+    }
+    this.closeDialog();
+  }
+
+  deleteShift(id: string) {
+    this.shiftService.deleteShift(id);
+    this.closeDialog();
+  }
+
+  // --- Person Details ---
+  openPersonDetails(staff: StaffMember) {
+    this.selectedPerson.set(staff);
+    this.isPersonDialogOpen.set(true);
+  }
+
+  closePersonDialog() {
+    this.isPersonDialogOpen.set(false);
+    this.selectedPerson.set(null);
+  }
+
+  // --- Drag & Drop (HTML5 API) ---
+
+  onDragStart(event: DragEvent, shift: Shift) {
+    if (event.dataTransfer) {
+      event.dataTransfer.setData('text/plain', JSON.stringify(shift));
+      event.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault(); // Allow drop
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  onDrop(event: DragEvent, targetDate: Date, targetStaffId: string) {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      const data = event.dataTransfer.getData('text/plain');
+      if (data) {
+        const sourceShift = JSON.parse(data) as Shift;
+        // Check if moving to different day/person
+        const targetDateStr = DateUtils.formatDate(targetDate);
+
+        if (sourceShift.staffId !== targetStaffId || sourceShift.date !== targetDateStr) {
+           this.shiftService.updateShift({
+             id: sourceShift.id,
+             staffId: targetStaffId,
+             date: targetDateStr,
+             status: 'draft'
+           });
+        }
+      }
+    }
   }
 }

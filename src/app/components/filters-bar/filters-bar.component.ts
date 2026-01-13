@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ShiftService } from '../../services/shift.service';
 import { DateUtils } from '../../utils/date-utils';
+import { Role } from '../../models/shift-planner.models';
 
 @Component({
   selector: 'app-filters-bar',
@@ -17,36 +18,49 @@ import { DateUtils } from '../../utils/date-utils';
         </button>
         <div class="date-display">
           <span class="material-symbols-outlined icon-primary">calendar_today</span>
-          <span class="date-text">{{ formattedDate() }}</span>
+          <!-- Date Input hidden but clickable via label/trigger -->
+          <!-- Using showPicker() on click to ensure it opens on modern browsers -->
+          <input
+            #dateInput
+            type="date"
+            [ngModel]="dateInputValue()"
+            (ngModelChange)="onDateChange($event)"
+            class="date-input-hidden"
+            id="date-picker-trigger">
+          <label
+            (click)="dateInput.showPicker()"
+            for="date-picker-trigger"
+            class="date-text cursor-pointer">
+            {{ formattedDate() }}
+          </label>
         </div>
         <button (click)="nextDate()" class="icon-btn">
           <span class="material-symbols-outlined">arrow_forward_ios</span>
         </button>
       </div>
 
-      <!-- Role Filter -->
+      <!-- Role Filter (Custom Dropdown) -->
       <div class="filter-group role-selector">
-        <select
-          [ngModel]="shiftService.filterRoles()"
-          (ngModelChange)="updateRoles($event)"
-          multiple
-          class="role-select">
-          <option value="Coordinador de técnicos">Coordinador de técnicos</option>
-          <option value="Técnico de campo">Técnico de campo</option>
-          <option value="Técnico laboratorio">Técnico laboratorio</option>
-          <option value="Operario monitoreo">Operario monitoreo</option>
-          <option value="Supervisor monitoreo">Supervisor monitoreo</option>
-        </select>
-        <div class="select-icon">
-          <span class="material-symbols-outlined">expand_more</span>
+        <div class="role-trigger" (click)="toggleRoleDropdown()">
+           <div class="select-label" *ngIf="shiftService.filterRoles().length > 0">
+              {{ shiftService.filterRoles().length }} seleccionados
+           </div>
+           <div class="select-label placeholder" *ngIf="shiftService.filterRoles().length === 0">
+              Filtrar por Rol...
+           </div>
+           <span class="material-symbols-outlined select-icon">expand_more</span>
         </div>
-        <!-- Custom Label Overlay -->
-        <div class="select-label" *ngIf="shiftService.filterRoles().length > 0">
-           {{ shiftService.filterRoles().length }} roles selected
-        </div>
-         <div class="select-label placeholder" *ngIf="shiftService.filterRoles().length === 0">
-           Filtrar por Rol...
-        </div>
+
+        @if (isRoleDropdownOpen()) {
+          <div class="role-dropdown-menu">
+            <div class="role-option" *ngFor="let role of availableRoles" (click)="toggleRole(role)">
+               <input type="checkbox" [checked]="shiftService.filterRoles().includes(role)" (click)="$event.stopPropagation(); toggleRole(role)">
+               <span>{{ role }}</span>
+            </div>
+          </div>
+          <!-- Backdrop to close -->
+          <div class="fixed-backdrop" (click)="closeRoleDropdown()"></div>
+        }
       </div>
 
       <!-- Home Office Toggle -->
@@ -54,16 +68,25 @@ import { DateUtils } from '../../utils/date-utils';
         <button
            (click)="shiftService.filterHomeOffice.set('all')"
            [class.active]="shiftService.filterHomeOffice() === 'all'"
-           class="toggle-btn">All</button>
+           class="toggle-btn">Todos</button>
         <button
            (click)="shiftService.filterHomeOffice.set('yes')"
            [class.active]="shiftService.filterHomeOffice() === 'yes'"
-           class="toggle-btn">HO Only</button>
+           class="toggle-btn">Solo HO</button>
         <button
            (click)="shiftService.filterHomeOffice.set('no')"
            [class.active]="shiftService.filterHomeOffice() === 'no'"
-           class="toggle-btn">Office</button>
+           class="toggle-btn">Oficina</button>
       </div>
+
+      <!-- Active Now Filter -->
+      <button
+         (click)="toggleActiveNow()"
+         [class.active]="shiftService.filterActiveNow()"
+         class="icon-btn-toggle"
+         title="Activos ahora">
+         <span class="material-symbols-outlined">schedule</span>
+      </button>
 
       <!-- Search -->
       <div class="filter-group search-box">
@@ -82,7 +105,7 @@ import { DateUtils } from '../../utils/date-utils';
        <div class="group-toggle-container">
          <span class="toggle-label">Agrupar Roles</span>
          <button
-           (click)="shiftService.groupByRole.update(v => !v)"
+           (click)="toggleGroupByRole()"
            [class.active]="shiftService.groupByRole()"
            class="switch-btn">
             <div class="switch-handle"></div>
@@ -105,6 +128,7 @@ import { DateUtils } from '../../utils/date-utils';
       border: 1px solid var(--border-color);
       border-radius: 8px;
       height: 40px;
+      position: relative;
     }
 
     /* Date Selector */
@@ -135,6 +159,7 @@ import { DateUtils } from '../../utils/date-utils';
       border-left: 1px solid var(--border-color);
       border-right: 1px solid var(--border-color);
       height: 24px;
+      position: relative;
     }
     .icon-primary {
       color: var(--primary);
@@ -144,48 +169,67 @@ import { DateUtils } from '../../utils/date-utils';
       font-size: 0.875rem;
       font-weight: 600;
       white-space: nowrap;
+      user-select: none;
+    }
+    .date-input-hidden {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 20; /* Ensure it is on top of label */
     }
 
     /* Role Selector */
     .role-selector {
-      position: relative;
       min-width: 220px;
-      background-color: var(--bg-surface);
-    }
-    .role-select {
-      width: 100%;
-      height: 100%;
-      background: none;
-      border: none;
-      padding: 0 12px;
-      opacity: 0; /* hidden but clickable */
       cursor: pointer;
-      position: absolute;
-      z-index: 2;
+    }
+    .role-trigger {
+      width: 100%; height: 100%;
+      display: flex; align-items: center;
+      padding: 0 12px;
     }
     .select-icon {
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
+      margin-left: auto;
       color: var(--text-secondary);
-      pointer-events: none;
     }
     .select-label {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
       font-size: 0.875rem;
       color: var(--text-primary);
-      pointer-events: none;
-      width: calc(100% - 30px);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-right: 8px;
     }
     .select-label.placeholder {
       color: var(--text-secondary);
+    }
+    .role-dropdown-menu {
+      position: absolute;
+      top: 100%; left: 0; width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-top: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      z-index: 100;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+    .role-option {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
+    .role-option:hover {
+      background-color: var(--bg-surface-hover);
+    }
+    .fixed-backdrop {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99;
     }
 
     /* Toggle Group */
@@ -284,8 +328,32 @@ import { DateUtils } from '../../utils/date-utils';
 export class FiltersBarComponent {
   shiftService = inject(ShiftService);
 
+  isRoleDropdownOpen = signal(false);
+  availableRoles: Role[] = [
+    "Coordinador de técnicos",
+    "Técnico de campo",
+    "Técnico laboratorio",
+    "Operario monitoreo",
+    "Supervisor monitoreo"
+  ];
+
   formattedDate() {
+    const d = this.shiftService.currentDate();
+    // Manual formatting for Spanish short date: "DD/MM/YYYY" or "15 Ene 2026"
+    // Intl is better
+    return new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  }
+
+  dateInputValue() {
     return DateUtils.formatDate(this.shiftService.currentDate());
+  }
+
+  onDateChange(val: string) {
+    if (val) {
+      // Input date value is YYYY-MM-DD
+      const [y, m, d] = val.split('-').map(Number);
+      this.shiftService.setDate(new Date(y, m - 1, d));
+    }
   }
 
   prevDate() {
@@ -298,7 +366,29 @@ export class FiltersBarComponent {
     this.shiftService.setDate(newDate);
   }
 
-  updateRoles(val: any) {
-    this.shiftService.filterRoles.set(val);
+  toggleGroupByRole() {
+    this.shiftService.groupByRole.update(v => !v);
+  }
+
+  // Custom Role Dropdown Logic
+  toggleRoleDropdown() {
+    this.isRoleDropdownOpen.update(v => !v);
+  }
+
+  closeRoleDropdown() {
+    this.isRoleDropdownOpen.set(false);
+  }
+
+  toggleRole(role: Role) {
+    const current = this.shiftService.filterRoles();
+    if (current.includes(role)) {
+      this.shiftService.filterRoles.set(current.filter(r => r !== role));
+    } else {
+      this.shiftService.filterRoles.set([...current, role]);
+    }
+  }
+
+  toggleActiveNow() {
+    this.shiftService.filterActiveNow.update(v => !v);
   }
 }
