@@ -1,0 +1,128 @@
+<div class="timeline-container">
+
+  <!-- Timeline Header (Sticky) -->
+  <div class="timeline-header">
+    <!-- Ruler -->
+    <div class="ruler-row">
+      <div class="resource-header">
+        <span class="header-label">Empleado</span>
+      </div>
+      <div class="ruler-track"
+           (mousemove)="onTimelineMouseMove($event)"
+           (mouseleave)="onTimelineMouseLeave()">
+
+        <!-- Markers -->
+        <div class="markers-container">
+           @for(h of hours; track h; let i = $index) {
+             @if(i < 24) {
+                <div class="hour-block">
+                  <!-- Label (only for 0, 6, 12, 18, 24) -->
+                  @if(h % 6 === 0) {
+                     <span class="time-label dominant">{{ h }}:00</span>
+                  } @else {
+                     <span class="time-label">{{ h }}:00</span>
+                  }
+                  <div class="tick-mark"></div>
+                </div>
+             }
+           }
+           <!-- 24:00 Marker -->
+           <div class="hour-block end-marker">
+              <span class="time-label dominant">24:00</span>
+              <div class="tick-mark"></div>
+           </div>
+        </div>
+
+        <!-- Hover Cursor -->
+        @if(hoverTime()) {
+          <div class="hover-cursor" [style.left.%]="hoverX()">
+            <div class="cursor-tooltip">
+              {{ hoverTime() }} | {{ getActiveStaffCountAtHover() }} activos
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Coverage Track -->
+    <div class="coverage-row">
+       <div class="coverage-header">
+         <span class="coverage-label">Cobertura</span>
+       </div>
+       <div class="coverage-track">
+         @for(bucket of shiftService.dailyCoverage(); track bucket.time; let i = $index) {
+           <div class="coverage-bucket"
+                [class.has-staff]="bucket.count > 0"
+                [class.no-staff]="bucket.count === 0"
+                [title]="bucket.time + ': ' + bucket.count + ' staff'">
+           </div>
+         }
+       </div>
+    </div>
+  </div>
+
+  <!-- Main Scrollable Area -->
+  <div class="scroll-area custom-scrollbar">
+
+    @for(group of groupedStaff(); track group.role) {
+      <div class="group-header">
+        <div class="group-title-cell">
+          <span class="material-symbols-outlined">expand_more</span>
+          <span class="group-name">{{ group.role }} ({{ group.members.length }})</span>
+        </div>
+        <div class="group-track-cell"></div>
+      </div>
+
+      @for(staff of group.members; track staff.id) {
+        <div class="timeline-row group-row">
+
+          <!-- Resource Info -->
+          <div class="resource-cell">
+             <div class="avatar-circle">
+               {{ staff.fullName.substring(0,2) }}
+             </div>
+             <div class="resource-details">
+               <p class="resource-name">{{ staff.fullName }}</p>
+               <div class="resource-meta">
+                 <span class="role-text">{{ staff.role }}</span>
+                 @if(staff.homeOffice) {
+                   <span class="material-symbols-outlined icon-small" title="Home Office">home</span>
+                 }
+               </div>
+             </div>
+          </div>
+
+          <!-- Timeline Lane -->
+          <div class="timeline-lane"
+               (mousemove)="onTimelineMouseMove($event)"
+               (mouseleave)="onTimelineMouseLeave()">
+
+             <!-- Grid Lines -->
+             <div class="lane-grid">
+                @for(h of hours; track h) {
+                   @if(h < 24) {
+                     <div class="grid-line"></div>
+                   }
+                }
+             </div>
+
+             <!-- Shifts -->
+             @for(shift of shiftsMap().get(staff.id); track shift.id) {
+               <div class="shift-bar"
+                    [ngStyle]="getShiftStyle(shift)"
+                    [class.is-draft]="shift.status === 'draft'"
+                    [title]="shift.start + ' - ' + shift.end">
+
+                  <span class="shift-text">{{ shift.start }} - {{ shift.end }}</span>
+                  @if(shift.status === 'draft') {
+                    <span class="draft-indicator"></span>
+                  }
+               </div>
+             }
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+</div>

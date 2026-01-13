@@ -1,0 +1,356 @@
+/* Native CSS for Day Timeline View */
+
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-app);
+}
+
+.timeline-header {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/* Ruler Row */
+.ruler-row {
+  display: flex;
+  height: 40px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.resource-header {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.header-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ruler-track {
+  flex: 1;
+  position: relative;
+  display: flex;
+}
+
+.markers-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+}
+
+.hour-block {
+  flex: 1;
+  position: relative;
+  border-left: 1px solid var(--border-color);
+  height: 100%;
+}
+.hour-block:hover .time-label {
+  opacity: 1;
+}
+
+.end-marker {
+  flex: 0;
+  width: 1px;
+  border-right: 1px solid var(--border-color);
+  position: relative;
+}
+
+.time-label {
+  position: absolute;
+  top: -2px;
+  left: 4px;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  opacity: 0; /* hidden unless dominant or hover */
+  transition: opacity 0.2s;
+}
+
+.time-label.dominant {
+  opacity: 1;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hover-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--danger);
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cursor-tooltip {
+  background-color: var(--danger);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  transform: translateY(-100%) translateY(-4px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Coverage Row */
+.coverage-row {
+  display: flex;
+  height: 24px;
+  background-color: var(--bg-surface-hover);
+}
+
+.coverage-header {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  justify-content: space-between;
+}
+
+.coverage-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.coverage-track {
+  flex: 1;
+  display: flex;
+}
+
+.coverage-bucket {
+  flex: 1;
+  height: 100%;
+  opacity: 0.5;
+}
+
+.coverage-bucket.has-staff {
+  background-color: var(--success);
+}
+
+.coverage-bucket.no-staff {
+  background-color: var(--danger);
+}
+
+/* Scroll Area */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Group Header */
+.group-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  display: flex;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+}
+.group-header:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.group-title-cell {
+  width: var(--sidebar-width);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.group-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.group-track-cell {
+  flex: 1;
+  border-left: 1px solid var(--border-color);
+}
+
+/* Resource Row */
+.timeline-row {
+  display: flex;
+  height: var(--lane-height);
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+}
+.timeline-row:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.resource-cell {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+}
+.timeline-row:hover .resource-cell {
+  background-color: var(--bg-surface-hover);
+}
+
+.avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.resource-details {
+  min-width: 0;
+}
+
+.resource-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resource-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-text {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.icon-small {
+  font-size: 14px;
+  color: var(--primary);
+}
+
+/* Timeline Lane */
+.timeline-lane {
+  flex: 1;
+  position: relative;
+}
+
+.lane-grid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.grid-line {
+  flex: 1;
+  border-left: 1px solid var(--border-color);
+  height: 100%;
+}
+
+/* Shift Bar */
+.shift-bar {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  background-color: var(--primary);
+  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 8px;
+  cursor: grab;
+  z-index: 5;
+  overflow: hidden;
+}
+.shift-bar:hover {
+  filter: brightness(1.1);
+}
+.shift-bar:active {
+  cursor: grabbing;
+}
+
+.shift-text {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: white;
+  white-space: nowrap;
+}
+
+.shift-bar.is-draft {
+  /* pattern for draft */
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--primary),
+    var(--primary) 10px,
+    var(--primary-hover) 10px,
+    var(--primary-hover) 20px
+  );
+}
+
+.draft-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #fbbf24;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
