@@ -62,7 +62,7 @@ import { Shift, ShiftType } from '../../models/shift-planner.models';
     .dialog {
       background: white;
       border-radius: 8px;
-      width: 300px;
+      width: 400px; /* Increased width */
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       display: flex;
       flex-direction: column;

@@ -65,19 +65,23 @@
   <div class="scroll-area custom-scrollbar">
 
     @for(group of groupedStaff(); track group.role) {
-      <div class="group-header">
+      <div class="group-header" (click)="toggleGroup(group.role)">
         <div class="group-title-cell">
-          <span class="material-symbols-outlined">expand_more</span>
+          <span class="material-symbols-outlined transform transition-transform"
+                [class.-rotate-90]="isGroupCollapsed(group.role)">
+            expand_more
+          </span>
           <span class="group-name">{{ group.role }} ({{ group.members.length }})</span>
         </div>
         <div class="group-track-cell"></div>
       </div>
 
-      @for(staff of group.members; track staff.id) {
-        <div class="timeline-row group-row">
+      @if(!isGroupCollapsed(group.role)) {
+        @for(staff of group.members; track staff.id) {
+          <div class="timeline-row group-row">
 
           <!-- Resource Info -->
-          <div class="resource-cell">
+          <div class="resource-cell cursor-pointer hover:bg-slate-100" (click)="openPersonDetails(staff)">
              <div class="avatar-circle">
                {{ staff.fullName.substring(0,2) }}
              </div>
@@ -142,6 +146,7 @@
 
           </div>
         </div>
+        }
       }
     }
   </div>
@@ -153,5 +158,11 @@
     (saveEvent)="saveShift($event)"
     (deleteEvent)="deleteShift($event)">
   </app-shift-edit-dialog>
+
+  <app-person-details-dialog
+    [isOpen]="isPersonDialogOpen()"
+    [staff]="selectedPerson()"
+    (closeEvent)="closePersonDialog()">
+  </app-person-details-dialog>
 
 </div>

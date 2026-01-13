@@ -27,6 +27,7 @@ function generateStaff(): StaffMember[] {
       fullName: name,
       role,
       homeOffice: Math.random() > 0.7,
+      phone: `+34 6${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
       monthlyHours: 120 + Math.floor(Math.random() * 40),
       standardShiftStart: "08:00",
       standardShiftEnd: "16:00"

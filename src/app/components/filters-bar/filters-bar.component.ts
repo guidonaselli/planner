@@ -19,13 +19,20 @@ import { Role } from '../../models/shift-planner.models';
         <div class="date-display">
           <span class="material-symbols-outlined icon-primary">calendar_today</span>
           <!-- Date Input hidden but clickable via label/trigger -->
+          <!-- Using showPicker() on click to ensure it opens on modern browsers -->
           <input
+            #dateInput
             type="date"
             [ngModel]="dateInputValue()"
             (ngModelChange)="onDateChange($event)"
             class="date-input-hidden"
             id="date-picker-trigger">
-          <label for="date-picker-trigger" class="date-text cursor-pointer">{{ formattedDate() }}</label>
+          <label
+            (click)="dateInput.showPicker()"
+            for="date-picker-trigger"
+            class="date-text cursor-pointer">
+            {{ formattedDate() }}
+          </label>
         </div>
         <button (click)="nextDate()" class="icon-btn">
           <span class="material-symbols-outlined">arrow_forward_ios</span>
@@ -71,6 +78,15 @@ import { Role } from '../../models/shift-planner.models';
            [class.active]="shiftService.filterHomeOffice() === 'no'"
            class="toggle-btn">Oficina</button>
       </div>
+
+      <!-- Active Now Filter -->
+      <button
+         (click)="toggleActiveNow()"
+         [class.active]="shiftService.filterActiveNow()"
+         class="icon-btn-toggle"
+         title="Activos ahora">
+         <span class="material-symbols-outlined">schedule</span>
+      </button>
 
       <!-- Search -->
       <div class="filter-group search-box">
@@ -370,5 +386,9 @@ export class FiltersBarComponent {
     } else {
       this.shiftService.filterRoles.set([...current, role]);
     }
+  }
+
+  toggleActiveNow() {
+    this.shiftService.filterActiveNow.update(v => !v);
   }
 }

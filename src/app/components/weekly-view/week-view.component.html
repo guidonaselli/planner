@@ -44,7 +44,7 @@
       <div class="grid-row group-row">
 
         <!-- Row Header (Sticky Left) -->
-        <div class="row-header-cell">
+        <div class="row-header-cell cursor-pointer hover:bg-slate-100" (click)="openPersonDetails(row.member)">
           <div class="avatar-circle">
              {{ row.member.fullName.substring(0,2) }}
           </div>
@@ -58,11 +58,18 @@
         <div class="days-row">
           @for(cell of row.days; track cell.dateStr) {
              <div class="grid-cell"
-                  [class.has-shift]="cell.shifts.length > 0">
+                  [class.has-shift]="cell.shifts.length > 0"
+                  (click)="onCellClick(cell.date, row.member.id)"
+                  (dragover)="onDragOver($event)"
+                  (drop)="onDrop($event, cell.date, row.member.id)">
 
                 @if(cell.shifts.length > 0) {
                    @for(shift of cell.shifts; track shift.id) {
-                      <div class="mini-shift-card" [class.draft]="shift.status === 'draft'">
+                      <div class="mini-shift-card"
+                           [class.draft]="shift.status === 'draft'"
+                           draggable="true"
+                           (dragstart)="onDragStart($event, shift)"
+                           (click)="onShiftClick($event, shift)">
                          <div class="shift-content">
                             <span class="shift-time">{{ shift.start }} - {{ shift.end }}</span>
                             @if(shift.status === 'draft') {
@@ -85,5 +92,19 @@
       </div>
     }
   </div>
+
+  <app-shift-edit-dialog
+    [isOpen]="isDialogOpen()"
+    [shift]="selectedShift()"
+    (closeEvent)="closeDialog()"
+    (saveEvent)="saveShift($event)"
+    (deleteEvent)="deleteShift($event)">
+  </app-shift-edit-dialog>
+
+  <app-person-details-dialog
+    [isOpen]="isPersonDialogOpen()"
+    [staff]="selectedPerson()"
+    (closeEvent)="closePersonDialog()">
+  </app-person-details-dialog>
 
 </div>
