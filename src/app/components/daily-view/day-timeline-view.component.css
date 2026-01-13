@@ -1,5 +1,11 @@
 /* Enhanced Styles for Day View 15-min Grid & DnD */
 
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
 .timeline-container {
   display: flex;
   flex-direction: column;
@@ -157,6 +163,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Group Header */
@@ -268,6 +276,7 @@
 .timeline-lane {
   flex: 1;
   position: relative;
+  cursor: crosshair; /* Indicate clickable area */
 }
 
 .lane-grid {

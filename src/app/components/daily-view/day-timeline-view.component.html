@@ -94,7 +94,8 @@
           <!-- Timeline Lane -->
           <div class="timeline-lane"
                (mousemove)="onTimelineMouseMove($event)"
-               (mouseleave)="onTimelineMouseLeave()">
+               (mouseleave)="onTimelineMouseLeave()"
+               (click)="onLaneClick($event, staff.id)">
 
              <!-- Grid Lines (Every Hour) -->
              <div class="lane-grid">

@@ -54,7 +54,7 @@ import { WeekViewComponent } from '../weekly-view/week-view.component';
                  <span class="material-symbols-outlined icon-sm">auto_awesome</span>
                  Auto Asignar
                </button>
-               <button class="btn-primary">Publicar Cambios</button>
+               <button class="btn-primary" (click)="shiftService.publishChanges()">Publicar Cambios</button>
             </div>
           </div>
         </div>

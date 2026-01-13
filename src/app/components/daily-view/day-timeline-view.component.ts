@@ -75,6 +75,11 @@ export class DayTimelineViewComponent {
   });
 
   // --- Visuals ---
+  getLaneStyle() {
+    // Just a helper if we need dynamic lane widths
+    return {};
+  }
+
   getShiftStyle(shift: Shift) {
     const startMins = DateUtils.timeToMinutes(shift.start);
     const endMins = DateUtils.timeToMinutes(shift.end);
@@ -118,6 +123,34 @@ export class DayTimelineViewComponent {
     if (!this.isDragging()) {
       this.hoverTime.set(null);
     }
+  }
+
+  onLaneClick(event: MouseEvent, staffId: string) {
+    // Prevent if clicking on a shift (handled by stopPropagation in shift)
+    if (this.isDragging()) return;
+
+    // Calculate time from click position
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const percentage = Math.min(Math.max(x / rect.width, 0), 1);
+    const totalMinutes = Math.floor(percentage * 1440);
+
+    // Snap to 15m
+    const snappedStart = Math.round(totalMinutes / 15) * 15;
+    const snappedEnd = Math.min(snappedStart + 480, 1440); // Default 8h shift
+
+    const newShift: Shift = {
+      id: crypto.randomUUID(),
+      staffId: staffId,
+      date: DateUtils.formatDate(this.shiftService.currentDate()),
+      start: DateUtils.minutesToTime(snappedStart),
+      end: DateUtils.minutesToTime(snappedEnd),
+      type: 'standard',
+      status: 'draft',
+      source: 'manual'
+    };
+
+    this.openEditDialog(newShift, event);
   }
 
   getActiveStaffCountAtHover(): number {

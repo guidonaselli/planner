@@ -182,6 +182,16 @@ export class ShiftService {
     this.shifts.update(current => current.filter(s => s.id !== shiftId));
   }
 
+  publishChanges() {
+    this.saveSnapshot();
+    // In a real backend, this would PUT/POST.
+    // Here we just update all 'draft' shifts to 'confirmed'.
+    this.shifts.update(current => current.map(s => ({
+       ...s,
+       status: 'confirmed'
+    })));
+  }
+
   // --- Logic: Midnight Crossing ---
   normalizeShift(staffId: string, date: string, start: string, end: string): Shift[] {
     // ... same as before, but ensure ID generation uses a simple random for prototype
