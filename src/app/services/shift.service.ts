@@ -279,10 +279,25 @@ export class ShiftService {
        if (workingCount < req.minStaff) {
           const needed = req.minStaff - workingCount;
 
-          // Find candidates
-          // Relaxed constraint: Allow double shifts if not overlapping (simplified check: just role match for prototype)
-          // Ideally check time overlap.
-          const candidates = staff.filter(s => s.role === req.role);
+          // Find candidates who do NOT overlap with this requirement time
+          // Candidate must have correct role AND (no shift OR shifts do not overlap req range)
+          const candidates = staff.filter(s => {
+             if (s.role !== req.role) return false;
+
+             // Check overlaps with existing shifts for this person on this day
+             const personShifts = currentShifts.filter(shift => shift.staffId === s.id);
+             const hasOverlap = personShifts.some(shift => {
+                const sStart = DateUtils.timeToMinutes(shift.start);
+                const sEnd = DateUtils.timeToMinutes(shift.end);
+                // Standard overlap check: (StartA < EndB) and (EndA > StartB)
+                return Math.max(reqStart, sStart) < Math.min(reqEnd, sEnd);
+             });
+
+             return !hasOverlap;
+          });
+
+          // Sort candidates by monthly hours (ascending) to balance load?
+          // For now just pick first available to satisfy "greedy" simple logic but ensuring NO overlap.
 
           for (let i = 0; i < needed && i < candidates.length; i++) {
              const cand = candidates[i];
