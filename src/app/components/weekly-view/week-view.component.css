@@ -1,0 +1,258 @@
+.week-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-app);
+}
+
+.week-header {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.header-row {
+  display: flex;
+  height: 64px;
+}
+
+.corner-cell {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 16px;
+  background-color: var(--bg-surface);
+}
+
+.header-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.sub-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.days-track {
+  flex: 1;
+  display: flex;
+}
+
+.day-column-header {
+  flex: 1;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.day-column-header.is-holiday {
+  background-color: rgba(239, 68, 68, 0.05); /* very light red/holiday tint */
+}
+
+.day-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.day-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.day-number {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.holiday-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+.icon-xs {
+  font-size: 14px;
+  color: var(--warning);
+}
+
+.metrics-bar {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.metric-track {
+  height: 4px;
+  width: 48px;
+  background-color: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.metric-fill {
+  height: 100%;
+  width: 80%; /* mocked */
+  background-color: var(--success);
+}
+
+/* Grid Scroll */
+.grid-scroll {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+.grid-row {
+  display: flex;
+  min-height: 64px;
+  border-bottom: 1px solid var(--border-color);
+}
+.grid-row:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.row-header-cell {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+}
+.grid-row:hover .row-header-cell {
+  background-color: var(--bg-surface-hover);
+}
+
+.avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #e0e7ff; /* indigo-100 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4338ca; /* indigo-700 */
+}
+
+.row-details {
+  min-width: 0;
+}
+
+.row-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-role {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.days-row {
+  flex: 1;
+  display: flex;
+}
+
+.grid-cell {
+  flex: 1;
+  border-right: 1px solid var(--border-color);
+  padding: 6px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+.grid-cell:hover {
+  background-color: #f1f5f9;
+}
+
+.mini-shift-card {
+  width: 100%;
+  background-color: white;
+  border: 1px solid #bfdbfe; /* blue-200 */
+  border-radius: 4px;
+  padding: 4px;
+  margin-bottom: 4px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+  transition: border-color 0.2s;
+}
+.mini-shift-card:hover {
+  border-color: var(--primary);
+}
+
+.mini-shift-card.draft {
+  border-style: dashed;
+  border-color: var(--warning);
+}
+
+.shift-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.shift-time {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e40af; /* blue-800 */
+}
+
+.dot-draft {
+  width: 6px;
+  height: 6px;
+  background-color: var(--warning);
+  border-radius: 50%;
+}
+
+.add-btn-overlay {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.grid-cell:hover .add-btn-overlay {
+  opacity: 1;
+}
+.add-btn-overlay span {
+  color: var(--text-secondary);
+  font-size: 24px;
+}
+.add-btn-overlay span:hover {
+  color: var(--primary);
+}
