@@ -176,7 +176,7 @@ import { Role } from '../../models/shift-planner.models';
       top: 0; left: 0; width: 100%; height: 100%;
       opacity: 0;
       cursor: pointer;
-      z-index: 10;
+      z-index: 20; /* Ensure it is on top of label */
     }
 
     /* Role Selector */
