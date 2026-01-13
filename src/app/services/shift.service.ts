@@ -250,78 +250,94 @@ export class ShiftService {
   // --- Logic: Auto Distribute (Greedy) ---
   autoDistribute() {
     this.saveSnapshot();
-    // 1. Identify Gaps based on Requirements vs Coverage
-    // For prototype, let's just find random gaps in requirements and fill them
-    const dateStr = DateUtils.formatDate(this.currentDate());
-    const reqs = this.requirements();
-    const currentShifts = this.shiftsForCurrentDate();
-    const staff = this.staff(); // All staff (or filtered?) - usually all available
 
-    // Simple Heuristic: For each requirement, check if minStaff is met.
-    // If not, find a staff member of that role who is NOT working in that slot.
+    let daysToProcess: Date[] = [];
+
+    // Detect mode: Day vs Week
+    if (this.viewMode() === 'day') {
+      daysToProcess = [this.currentDate()];
+    } else {
+      // Process whole week
+      const start = DateUtils.getStartOfWeek(this.currentDate());
+      for (let i = 0; i < 7; i++) {
+        daysToProcess.push(DateUtils.addDays(start, i));
+      }
+    }
 
     const newShifts: Shift[] = [];
+    const allStaff = this.staff();
+    const requirements = this.requirements();
 
-    reqs.forEach(req => {
-       const reqStart = DateUtils.timeToMinutes(req.start);
-       const reqEnd = DateUtils.timeToMinutes(req.end);
+    daysToProcess.forEach(day => {
+       const dateStr = DateUtils.formatDate(day);
 
-       // Check coverage roughly (middle of requirement)
-       // A real algo would check every bucket. Simplified: check start.
-       const workingCount = currentShifts.filter(s => {
-          const sStart = DateUtils.timeToMinutes(s.start);
-          const sEnd = DateUtils.timeToMinutes(s.end);
-          // Overlap check
-          const staffMember = staff.find(st => st.id === s.staffId);
-          return staffMember?.role === req.role && Math.max(reqStart, sStart) < Math.min(reqEnd, sEnd);
-       }).length;
+       // Filter shifts for this specific day to check coverage/overlaps
+       const dailyShifts = this.shifts().filter(s => s.date === dateStr);
 
-       if (workingCount < req.minStaff) {
-          const needed = req.minStaff - workingCount;
+       requirements.forEach(req => {
+          const reqStart = DateUtils.timeToMinutes(req.start);
+          const reqEnd = DateUtils.timeToMinutes(req.end);
 
-          // Find candidates who do NOT overlap with this requirement time
-          // Candidate must have correct role AND (no shift OR shifts do not overlap req range)
-          const candidates = staff.filter(s => {
-             if (s.role !== req.role) return false;
+          // 1. Calculate current coverage for this requirement
+          const activeCount = dailyShifts.filter(s => {
+             // Does this shift overlap with the requirement?
+             const sStart = DateUtils.timeToMinutes(s.start);
+             const sEnd = DateUtils.timeToMinutes(s.end);
+             const overlap = Math.max(reqStart, sStart) < Math.min(reqEnd, sEnd);
 
-             // Check overlaps with existing shifts for this person on this day
-             const personShifts = currentShifts.filter(shift => shift.staffId === s.id);
-             const hasOverlap = personShifts.some(shift => {
-                const sStart = DateUtils.timeToMinutes(shift.start);
-                const sEnd = DateUtils.timeToMinutes(shift.end);
-                // Standard overlap check: (StartA < EndB) and (EndA > StartB)
-                return Math.max(reqStart, sStart) < Math.min(reqEnd, sEnd);
+             if (!overlap) return false;
+
+             // Does the staff match the role?
+             const member = allStaff.find(m => m.id === s.staffId);
+             return member && member.role === req.role;
+          }).length;
+
+          if (activeCount < req.minStaff) {
+             const needed = req.minStaff - activeCount;
+             let assigned = 0;
+
+             // 2. Find Candidates: Correct Role + NO shift on this day (Strict "No Overlap" + "Empty Day" preference?)
+             // User requirement: "asigne nada más a gente que no tenga un horario ya asignado ese día."
+
+             const candidates = allStaff.filter(s => {
+                if (s.role !== req.role) return false;
+
+                // Strict check: Person must have NO shifts on this day
+                const hasShiftToday = dailyShifts.some(shift => shift.staffId === s.id);
+                if (hasShiftToday) return false;
+
+                // Also check if they are already assigned in this batch (newShifts)
+                const assignedInBatch = newShifts.some(ns => ns.staffId === s.id && ns.date === dateStr);
+                if (assignedInBatch) return false;
+
+                return true;
              });
 
-             return !hasOverlap;
-          });
-
-          // Sort candidates by monthly hours (ascending) to balance load?
-          // For now just pick first available to satisfy "greedy" simple logic but ensuring NO overlap.
-
-          for (let i = 0; i < needed && i < candidates.length; i++) {
-             const cand = candidates[i];
-             // Create shift
-             newShifts.push({
-               id: crypto.randomUUID(),
-               staffId: cand.id,
-               date: dateStr,
-               start: req.start,
-               end: req.end,
-               type: 'standard',
-               status: 'draft',
-               source: 'auto'
-             });
+             // Simple greedy assignment
+             for (let i = 0; i < candidates.length && assigned < needed; i++) {
+                const cand = candidates[i];
+                newShifts.push({
+                  id: crypto.randomUUID(),
+                  staffId: cand.id,
+                  date: dateStr,
+                  start: req.start,
+                  end: req.end,
+                  type: 'standard',
+                  status: 'draft',
+                  source: 'auto'
+                });
+                assigned++;
+             }
           }
-       }
+       });
     });
 
     if (newShifts.length > 0) {
       this.shifts.update(curr => [...curr, ...newShifts]);
-      alert(`Se han asignado ${newShifts.length} turnos automáticamente.`);
-      return true; // Changes made
+      alert(`Se han asignado ${newShifts.length} turnos automáticamente para cubrir huecos.`);
+      return true;
     } else {
-      alert('No se encontraron huecos que requieran asignación automática.');
+      alert('No se encontraron huecos cubribles con personal libre disponible.');
     }
     return false;
   }
