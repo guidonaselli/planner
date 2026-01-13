@@ -5,32 +5,33 @@ export type Role =
   | "Operario monitoreo"
   | "Supervisor monitoreo";
 
+export type ShiftType = "standard" | "exception" | "overtime";
 export type ShiftStatus = "draft" | "confirmed";
 
 export interface StaffMember {
   id: string;
   fullName: string;
   role: Role;
-  homeOffice: boolean;
+  homeOffice: boolean; // Keep mainly for visual info if needed
 
-  scheduledHoursPerDay: number;      // ej 8
-  overtimeMaxHoursPerDay: number;    // ej 2
+  // Accumulated stats for the month (mocked)
+  monthlyHours: number;
 
-  availabilityTemplate: {
-    start: string; // "HH:MM"
-    end: string;   // "HH:MM"
-  };
+  // Standard schedule definition (could be more complex, keeping simple for now)
+  standardShiftStart?: string; // "08:00"
+  standardShiftEnd?: string;   // "16:00"
 }
 
 export interface Shift {
   id: string;
   staffId: string;
-  date: string;     // "YYYY-MM-DD" del día donde cae el segmento
+  date: string;     // "YYYY-MM-DD"
   start: string;    // "HH:MM"
   end: string;      // "HH:MM"
+  type: ShiftType;
   status: ShiftStatus;
 
-  shiftGroupId?: string; // si viene de split por medianoche
+  shiftGroupId?: string; // Linked split shifts
   source?: "manual" | "auto";
 }
 
@@ -40,11 +41,9 @@ export interface CoverageRequirement {
   start: string; // "HH:MM"
   end: string;   // "HH:MM"
   minStaff: number;
-  appliesOnHolidays?: boolean; // si querés diferenciar
 }
 
 export interface Holiday {
   date: string; // "YYYY-MM-DD"
   name: string;
-  defaultRule: "Dotación mínima" | "Sin asignación";
 }

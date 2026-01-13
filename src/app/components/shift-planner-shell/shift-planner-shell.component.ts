@@ -22,6 +22,18 @@ import { WeekViewComponent } from '../weekly-view/week-view.component';
           </div>
 
           <div class="actions-section">
+            <!-- Undo/Redo -->
+            <div class="action-buttons">
+               <button class="btn-icon" (click)="shiftService.undo()" title="Undo">
+                  <span class="material-symbols-outlined">undo</span>
+               </button>
+               <button class="btn-icon" (click)="shiftService.redo()" title="Redo">
+                  <span class="material-symbols-outlined">redo</span>
+               </button>
+            </div>
+
+            <div class="divider"></div>
+
             <!-- View Toggles -->
             <div class="view-toggle">
               <button
@@ -36,15 +48,12 @@ import { WeekViewComponent } from '../weekly-view/week-view.component';
               </button>
             </div>
 
-            <!-- Draft Status -->
-            <div class="draft-badge">
-               <span class="dot"></span>
-               <span>Draft Mode</span>
-            </div>
-
             <!-- Actions -->
             <div class="action-buttons">
-               <button class="btn-text">Descartar</button>
+               <button class="btn-text" (click)="shiftService.autoDistribute()">
+                 <span class="material-symbols-outlined icon-sm">auto_awesome</span>
+                 Auto Asignar
+               </button>
                <button class="btn-primary">Publicar Cambios</button>
             </div>
           </div>
@@ -114,6 +123,8 @@ import { WeekViewComponent } from '../weekly-view/week-view.component';
       gap: 16px;
     }
 
+    .divider { width: 1px; height: 24px; background: var(--border-color); }
+
     .view-toggle {
       display: flex;
       background-color: var(--bg-surface-hover);
@@ -141,31 +152,16 @@ import { WeekViewComponent } from '../weekly-view/week-view.component';
       font-weight: 600;
     }
 
-    .draft-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      background-color: var(--warning-bg);
-      border: 1px solid var(--warning-border);
-      color: var(--warning-text); /* usually darker amber */
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #b45309; /* amber-700 */
-    }
-
-    .draft-badge .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: #f59e0b;
-    }
-
     .action-buttons {
       display: flex;
       gap: 8px;
     }
+
+    .btn-icon {
+      background: none; border: none; cursor: pointer; color: var(--text-secondary);
+      padding: 4px; border-radius: 4px;
+    }
+    .btn-icon:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
 
     .btn-text {
       background: none;
@@ -173,12 +169,17 @@ import { WeekViewComponent } from '../weekly-view/week-view.component';
       padding: 8px 16px;
       font-size: 0.875rem;
       font-weight: 600;
-      color: var(--text-secondary);
+      color: var(--primary);
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .btn-text:hover {
-      color: var(--text-primary);
+      background: var(--bg-surface-hover);
+      border-radius: 6px;
     }
+    .icon-sm { font-size: 18px; }
 
     .btn-primary {
       background-color: var(--primary);

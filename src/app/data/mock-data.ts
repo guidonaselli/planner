@@ -1,87 +1,111 @@
-import { StaffMember, CoverageRequirement, Holiday, Shift } from '../models/shift-planner.models';
+import { StaffMember, CoverageRequirement, Holiday, Shift, Role } from '../models/shift-planner.models';
+
+const NAMES = [
+  "Tomas García", "Sofía Martínez", "Nicolás Fernández", "Valentina López", "Matías Romero",
+  "Camila Pérez", "Juan Cruz Gómez", "Agustina Díaz", "Federico Silva", "Martina Herrera",
+  "Bruno Castro", "Lucía Molina", "Pablo Suárez", "Florencia Rivas", "Gonzalo Medina",
+  "María Belén Torres", "Diego Navarro", "Carolina Sosa", "Iván Acosta", "Milagros Vega",
+  "Julieta Álvarez", "Sebastián Ortega", "Ana Paula Ibarra", "Leandro Cabrera", "Paula Benítez",
+  "Hernán Funes", "Rocío Núñez", "Emanuel Peralta", "Micaela Giménez", "Ramiro Arias",
+  "Catalina Ponce", "Franco Villalba", "Lorena Quiroga", "Esteban Paz", "Noelia Vázquez",
+  "Marcos Ledesma", "Victoria Salas", "Facundo Correa", "Malena Barreto", "Ignacio Moya",
+  "Ailén Serrano", "Lautaro Godoy", "Sol Galarza", "Kevin Santillán", "Cecilia Araujo",
+  "Gastón Roldán", "Marina Luján", "Santiago Prieto", "Belén Cordero", "Nahuel Latorre"
+];
+
+function generateStaff(): StaffMember[] {
+  return NAMES.map((name, i) => {
+    let role: Role = "Operario monitoreo";
+    if (i < 5) role = "Coordinador de técnicos";
+    else if (i < 15) role = "Técnico de campo";
+    else if (i < 25) role = "Técnico laboratorio";
+    else if (i < 45) role = "Operario monitoreo";
+    else role = "Supervisor monitoreo";
+
+    return {
+      id: `u${1000 + i}`,
+      fullName: name,
+      role,
+      homeOffice: Math.random() > 0.7,
+      monthlyHours: 120 + Math.floor(Math.random() * 40),
+      standardShiftStart: "08:00",
+      standardShiftEnd: "16:00"
+    };
+  });
+}
+
+const STAFF = generateStaff();
+
+const REQS: CoverageRequirement[] = [
+  { id: "r1", role: "Operario monitoreo", start: "00:00", end: "08:00", minStaff: 2 },
+  { id: "r2", role: "Operario monitoreo", start: "08:00", end: "16:00", minStaff: 5 },
+  { id: "r3", role: "Operario monitoreo", start: "16:00", end: "24:00", minStaff: 3 },
+  { id: "r4", role: "Supervisor monitoreo", start: "08:00", end: "18:00", minStaff: 1 },
+  { id: "r5", role: "Técnico de campo", start: "08:00", end: "17:00", minStaff: 3 }
+];
+
+const HOLIDAYS: Holiday[] = [
+  { date: "2026-01-15", name: "Feriado Local" }
+];
+
+function generateShifts(staff: StaffMember[]): Shift[] {
+  const shifts: Shift[] = [];
+  const date = "2026-01-13"; // Demo Day
+
+  staff.forEach(s => {
+    // 80% chance to have a shift today
+    if (Math.random() > 0.2) {
+      let start = s.standardShiftStart || "08:00";
+      let end = s.standardShiftEnd || "16:00";
+      let type: "standard" | "exception" | "overtime" = "standard";
+
+      // Random variations
+      const rand = Math.random();
+      if (rand > 0.9) {
+        // Exception
+        start = "10:00";
+        end = "18:00";
+        type = "exception";
+      } else if (rand > 0.85) {
+        // Overtime (longer shift)
+        end = "18:00"; // 2h OT
+      }
+
+      shifts.push({
+        id: crypto.randomUUID(),
+        staffId: s.id,
+        date,
+        start,
+        end,
+        type: end > "16:00" && type === "standard" ? "standard" : type, // Simplify
+        status: "confirmed",
+        source: "manual"
+      });
+
+      // Split OT visual if strictly separating blocks (Advanced: for now just one block type)
+      // Let's add explicit OT blocks for some "Técnico de campo"
+      if (s.role === "Técnico de campo" && Math.random() > 0.8) {
+         shifts.push({
+            id: crypto.randomUUID(),
+            staffId: s.id,
+            date,
+            start: "18:00",
+            end: "20:00",
+            type: "overtime",
+            status: "draft",
+            source: "manual"
+         });
+      }
+    }
+  });
+  return shifts;
+}
+
+const SHIFTS = generateShifts(STAFF);
 
 export const MOCK_DATA = {
-  staff: [
-    { "id": "u001", "fullName": "Tomás García", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "16:00" } },
-    { "id": "u002", "fullName": "Sofía Martínez", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "06:00", "end": "14:00" } },
-    { "id": "u003", "fullName": "Nicolás Fernández", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "14:00", "end": "22:00" } },
-    { "id": "u004", "fullName": "Valentina López", "role": "Supervisor monitoreo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "16:00" } },
-    { "id": "u005", "fullName": "Matías Romero", "role": "Supervisor monitoreo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "16:00", "end": "00:00" } },
-    { "id": "u006", "fullName": "Camila Pérez", "role": "Coordinador de técnicos", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "09:00", "end": "17:00" } },
-    { "id": "u007", "fullName": "Juan Cruz Gómez", "role": "Coordinador de técnicos", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "10:00", "end": "18:00" } },
-    { "id": "u008", "fullName": "Agustina Díaz", "role": "Técnico laboratorio", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "07:00", "end": "15:00" } },
-    { "id": "u009", "fullName": "Federico Silva", "role": "Técnico laboratorio", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "12:00", "end": "20:00" } },
-    { "id": "u010", "fullName": "Martina Herrera", "role": "Técnico laboratorio", "homeOffice": true, "scheduledHoursPerDay": 6, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "14:00" } },
-    { "id": "u011", "fullName": "Bruno Castro", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "06:00", "end": "14:00" } },
-    { "id": "u012", "fullName": "Lucía Molina", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "14:00", "end": "22:00" } },
-    { "id": "u013", "fullName": "Pablo Suárez", "role": "Técnico de campo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "09:00", "end": "17:00" } },
-    { "id": "u014", "fullName": "Florencia Rivas", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "16:00" } },
-    { "id": "u015", "fullName": "Gonzalo Medina", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "16:00", "end": "00:00" } },
-    { "id": "u016", "fullName": "María Belén Torres", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "00:00", "end": "08:00" } },
-    { "id": "u017", "fullName": "Diego Navarro", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "16:00" } },
-    { "id": "u018", "fullName": "Carolina Sosa", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "16:00", "end": "00:00" } },
-    { "id": "u019", "fullName": "Iván Acosta", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "06:00", "end": "14:00" } },
-    { "id": "u020", "fullName": "Milagros Vega", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "14:00", "end": "22:00" } },
-    { "id": "u021", "fullName": "Julieta Álvarez", "role": "Supervisor monitoreo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "07:00", "end": "15:00" } },
-    { "id": "u022", "fullName": "Sebastián Ortega", "role": "Supervisor monitoreo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "15:00", "end": "23:00" } },
-    { "id": "u023", "fullName": "Ana Paula Ibarra", "role": "Coordinador de técnicos", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "16:00" } },
-    { "id": "u024", "fullName": "Leandro Cabrera", "role": "Coordinador de técnicos", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "12:00", "end": "20:00" } },
-    { "id": "u025", "fullName": "Paula Benítez", "role": "Técnico laboratorio", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "06:00", "end": "14:00" } },
-    { "id": "u026", "fullName": "Hernán Funes", "role": "Técnico laboratorio", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "14:00", "end": "22:00" } },
-    { "id": "u027", "fullName": "Rocío Núñez", "role": "Técnico de campo", "homeOffice": true, "scheduledHoursPerDay": 6, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "10:00", "end": "16:00" } },
-    { "id": "u028", "fullName": "Emanuel Peralta", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "07:00", "end": "15:00" } },
-    { "id": "u029", "fullName": "Micaela Giménez", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "15:00", "end": "23:00" } },
-    { "id": "u030", "fullName": "Ramiro Arias", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "16:00" } },
-    { "id": "u031", "fullName": "Catalina Ponce", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "00:00", "end": "08:00" } },
-    { "id": "u032", "fullName": "Franco Villalba", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "16:00" } },
-    { "id": "u033", "fullName": "Lorena Quiroga", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "16:00", "end": "00:00" } },
-    { "id": "u034", "fullName": "Esteban Paz", "role": "Supervisor monitoreo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "16:00" } },
-    { "id": "u035", "fullName": "Noelia Vázquez", "role": "Supervisor monitoreo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "16:00", "end": "00:00" } },
-    { "id": "u036", "fullName": "Marcos Ledesma", "role": "Coordinador de técnicos", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "07:00", "end": "15:00" } },
-    { "id": "u037", "fullName": "Victoria Salas", "role": "Coordinador de técnicos", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "13:00", "end": "21:00" } },
-    { "id": "u038", "fullName": "Facundo Correa", "role": "Técnico laboratorio", "homeOffice": false, "scheduledHoursPerDay": 6, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "09:00", "end": "15:00" } },
-    { "id": "u039", "fullName": "Malena Barreto", "role": "Técnico laboratorio", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "15:00", "end": "23:00" } },
-    { "id": "u040", "fullName": "Ignacio Moya", "role": "Técnico laboratorio", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "08:00", "end": "16:00" } },
-    { "id": "u041", "fullName": "Ailén Serrano", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "06:00", "end": "14:00" } },
-    { "id": "u042", "fullName": "Lautaro Godoy", "role": "Técnico de campo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "14:00", "end": "22:00" } },
-    { "id": "u043", "fullName": "Sol Galarza", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "06:00", "end": "14:00" } },
-    { "id": "u044", "fullName": "Kevin Santillán", "role": "Operario monitoreo", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "14:00", "end": "22:00" } },
-    { "id": "u045", "fullName": "Cecilia Araujo", "role": "Supervisor monitoreo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "07:00", "end": "15:00" } },
-    { "id": "u046", "fullName": "Gastón Roldán", "role": "Supervisor monitoreo", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "15:00", "end": "23:00" } },
-    { "id": "u047", "fullName": "Marina Luján", "role": "Coordinador de técnicos", "homeOffice": true, "scheduledHoursPerDay": 6, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "09:00", "end": "15:00" } },
-    { "id": "u048", "fullName": "Santiago Prieto", "role": "Coordinador de técnicos", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "11:00", "end": "19:00" } },
-    { "id": "u049", "fullName": "Belén Cordero", "role": "Técnico laboratorio", "homeOffice": false, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "07:00", "end": "15:00" } },
-    { "id": "u050", "fullName": "Nahuel Latorre", "role": "Técnico laboratorio", "homeOffice": true, "scheduledHoursPerDay": 8, "overtimeMaxHoursPerDay": 2, "availabilityTemplate": { "start": "13:00", "end": "21:00" } }
-  ] as StaffMember[],
-
-  requirements: [
-    { "id": "r1", "role": "Operario monitoreo", "start": "00:00", "end": "08:00", "minStaff": 1 },
-    { "id": "r2", "role": "Operario monitoreo", "start": "08:00", "end": "16:00", "minStaff": 2 },
-    { "id": "r3", "role": "Operario monitoreo", "start": "16:00", "end": "24:00", "minStaff": 2 },
-    { "id": "r4", "role": "Supervisor monitoreo", "start": "08:00", "end": "16:00", "minStaff": 1 },
-    { "id": "r5", "role": "Supervisor monitoreo", "start": "16:00", "end": "24:00", "minStaff": 1 },
-    { "id": "r6", "role": "Técnico de campo", "start": "08:00", "end": "18:00", "minStaff": 2 },
-    { "id": "r7", "role": "Técnico laboratorio", "start": "07:00", "end": "20:00", "minStaff": 1 },
-    { "id": "r8", "role": "Coordinador de técnicos", "start": "09:00", "end": "18:00", "minStaff": 1 }
-  ] as CoverageRequirement[],
-
-  holidays: [
-    { "date": "2026-01-15", "name": "Feriado local (demo)", "defaultRule": "Dotación mínima" }
-  ] as Holiday[],
-
-  shifts: [
-    { "id": "s1001", "staffId": "u016", "date": "2026-01-13", "start": "00:00", "end": "06:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1002", "staffId": "u031", "date": "2026-01-13", "start": "00:00", "end": "05:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1010", "staffId": "u002", "date": "2026-01-13", "start": "06:00", "end": "14:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1011", "staffId": "u019", "date": "2026-01-13", "start": "06:00", "end": "14:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1020", "staffId": "u004", "date": "2026-01-13", "start": "08:00", "end": "16:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1030", "staffId": "u001", "date": "2026-01-13", "start": "08:00", "end": "18:00", "status": "draft", "source": "manual" },
-    { "id": "s1031", "staffId": "u011", "date": "2026-01-13", "start": "08:00", "end": "16:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1040", "staffId": "u008", "date": "2026-01-13", "start": "07:00", "end": "15:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1050", "staffId": "u003", "date": "2026-01-13", "start": "14:00", "end": "22:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1051", "staffId": "u020", "date": "2026-01-13", "start": "14:00", "end": "22:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1060", "staffId": "u005", "date": "2026-01-13", "start": "16:00", "end": "24:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1070", "staffId": "u018", "date": "2026-01-13", "start": "16:00", "end": "24:00", "status": "confirmed", "source": "manual" },
-    { "id": "s1080", "staffId": "u025", "date": "2026-01-13", "start": "12:00", "end": "20:00", "status": "confirmed", "source": "manual" }
-  ] as Shift[]
+  staff: STAFF,
+  requirements: REQS,
+  holidays: HOLIDAYS,
+  shifts: SHIFTS
 };

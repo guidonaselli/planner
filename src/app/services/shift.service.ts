@@ -17,6 +17,10 @@ export class ShiftService {
   requirements: WritableSignal<CoverageRequirement[]> = signal(MOCK_DATA.requirements);
   holidays: WritableSignal<Holiday[]> = signal(MOCK_DATA.holidays);
 
+  // Undo/Redo Stacks (storing Shift[] snapshots)
+  private undoStack: Shift[][] = [];
+  private redoStack: Shift[][] = [];
+
   // Filters
   filterRoles: WritableSignal<Role[]> = signal([]);
   filterHomeOffice: WritableSignal<'all' | 'yes' | 'no'> = signal('all');
@@ -26,9 +30,8 @@ export class ShiftService {
 
   constructor() {}
 
-  // Computed Signals
+  // --- Computed Signals ---
 
-  // Filtered Staff
   filteredStaff: Signal<StaffMember[]> = computed(() => {
     const allStaff = this.staff();
     const roles = this.filterRoles();
@@ -36,21 +39,14 @@ export class ShiftService {
     const search = this.filterSearch().toLowerCase();
 
     return allStaff.filter(member => {
-      // Role filter
       if (roles.length > 0 && !roles.includes(member.role)) return false;
-
-      // Home Office filter
       if (homeOffice === 'yes' && !member.homeOffice) return false;
       if (homeOffice === 'no' && member.homeOffice) return false;
-
-      // Search filter
       if (search && !member.fullName.toLowerCase().includes(search)) return false;
-
       return true;
     });
   });
 
-  // Shifts for current date
   shiftsForCurrentDate: Signal<Shift[]> = computed(() => {
     const dateStr = DateUtils.formatDate(this.currentDate());
     const allShifts = this.shifts();
@@ -63,14 +59,15 @@ export class ShiftService {
     });
   });
 
-  // Coverage Calculation (5 min buckets)
-  // Returns an array of 288 buckets (24h * 12 buckets/h)
-  // Each bucket: { time: string, count: number, roles: Record<Role, number> }
+  // Coverage Calculation (5 min buckets -> optimized to 15 min logic for display later if needed)
   dailyCoverage: Signal<any[]> = computed(() => {
     const buckets = [];
     const shifts = this.shiftsForCurrentDate();
-    const staffMap = new Map(this.staff().map(s => [s.id, s]));
+    // Use filtered staff for "Visual Coverage"?
+    // Usually coverage is global, but let's stick to "visible" coverage for now
+    const staffIds = new Set(this.filteredStaff().map(s => s.id));
 
+    // 288 buckets (5 mins) for granularity
     for (let i = 0; i < 288; i++) {
       const minutes = i * 5;
       const timeStr = DateUtils.minutesToTime(minutes);
@@ -79,114 +76,193 @@ export class ShiftService {
       const roleCounts: Record<string, number> = {};
 
       shifts.forEach(shift => {
+        if (!staffIds.has(shift.staffId)) return;
         const start = DateUtils.timeToMinutes(shift.start);
         const end = DateUtils.timeToMinutes(shift.end);
-        // Standard check: start <= minutes < end
-        // Special case: end is 24:00 (1440 mins) which is valid
+
         if (minutes >= start && minutes < end) {
-           const staff = staffMap.get(shift.staffId);
+           const staff = this.staff().find(s => s.id === shift.staffId);
            if (staff) {
-             // Apply filters to coverage calculation? Usually coverage reflects reality regardless of view filters,
-             // but if we want to see "coverage of filtered view", we check filteredStaff.
-             // Requirement: "Capa de cobertura... desde los turnos reales filtrados"
-             // But usually coverage helps identify gaps in the whole schedule.
-             // Let's stick to showing coverage of *visible* people if that matches the prompt "derived from filtered".
-             // Prompt says: "Cobertura... debería calcularse... desde los turnos reales filtrados".
-             // Okay, I will check if staff is in filteredStaff.
-             if (this.filteredStaff().find(s => s.id === staff.id)) {
-                count++;
-                roleCounts[staff.role] = (roleCounts[staff.role] || 0) + 1;
-             }
+              count++;
+              roleCounts[staff.role] = (roleCounts[staff.role] || 0) + 1;
            }
         }
       });
-
-      buckets.push({ time: minutes, count, roleCounts });
+      buckets.push({ time: minutes, timeStr, count, roleCounts });
     }
     return buckets;
   });
 
-  // Requirements status
-  requirementsStatus: Signal<any[]> = computed(() => {
-    const reqs = this.requirements();
-    const coverage = this.dailyCoverage();
-    // Logic to check gaps
-    // ... simplified for now
-    return [];
-  });
+  // --- Actions ---
 
-  // Actions
+  private saveSnapshot() {
+    // Deep copy shifts
+    this.undoStack.push(JSON.parse(JSON.stringify(this.shifts())));
+    if (this.undoStack.length > 20) this.undoStack.shift(); // Limit history
+    this.redoStack = []; // Clear redo on new action
+  }
+
+  undo() {
+    if (this.undoStack.length === 0) return;
+    const current = this.shifts();
+    this.redoStack.push(JSON.parse(JSON.stringify(current)));
+    const prev = this.undoStack.pop();
+    if (prev) this.shifts.set(prev);
+  }
+
+  redo() {
+    if (this.redoStack.length === 0) return;
+    const current = this.shifts();
+    this.undoStack.push(JSON.parse(JSON.stringify(current)));
+    const next = this.redoStack.pop();
+    if (next) this.shifts.set(next);
+  }
+
   setDate(date: Date) {
     this.currentDate.set(date);
   }
 
-  setFilters(filters: any) {
-    if (filters.roles) this.filterRoles.set(filters.roles);
-    if (filters.homeOffice) this.filterHomeOffice.set(filters.homeOffice);
-    if (filters.search !== undefined) this.filterSearch.set(filters.search);
-    if (filters.status) this.filterStatus.set(filters.status);
-  }
-
   addShift(shift: Shift) {
-    this.shifts.update(current => [...current, shift]);
+    this.saveSnapshot();
+    // Normalize logic (check midnight crossing)
+    const normalizedShifts = this.normalizeShift(shift.staffId, shift.date, shift.start, shift.end);
+    // Apply other properties
+    const finalShifts = normalizedShifts.map(s => ({
+       ...s,
+       type: shift.type,
+       status: shift.status
+    }));
+    this.shifts.update(current => [...current, ...finalShifts]);
   }
 
-  updateShift(updatedShift: Shift) {
-    this.shifts.update(current => current.map(s => s.id === updatedShift.id ? updatedShift : s));
+  updateShift(updatedShift: Partial<Shift> & { id: string }) {
+    this.saveSnapshot();
+
+    // Logic: Find original to get context, then normalize with new times
+    const currentShifts = this.shifts();
+    const original = currentShifts.find(s => s.id === updatedShift.id);
+
+    if (!original) return;
+
+    const merged = { ...original, ...updatedShift };
+
+    // Check if we need to re-normalize (times changed)
+    if (updatedShift.start || updatedShift.end) {
+        // If it was part of a group, we should probably delete the whole group.
+        // For prototype: we just delete this specific segment and replace with new normalized segment(s).
+        // If original had shiftGroupId, a more advanced logic would be to find the sibling.
+        // Here we simplify: Editing a segment acts on that segment's day/time context.
+
+        const newShifts = this.normalizeShift(merged.staffId, merged.date, merged.start, merged.end);
+        // Map over properties
+        const finalShifts = newShifts.map(s => ({
+            ...s,
+            id: s.id === newShifts[0].id ? original.id : s.id, // Try to keep ID if single result? No, normalize generates new IDs.
+            // Actually better to keep IDs if 1-to-1 but normalizeShift makes new IDs.
+            // Let's rely on new IDs for simplicity in split logic, except we want to track status.
+            type: merged.type,
+            status: merged.status,
+            source: merged.source
+        }));
+
+        this.shifts.update(curr => {
+           const filtered = curr.filter(s => s.id !== original.id);
+           return [...filtered, ...finalShifts];
+        });
+    } else {
+        // Just property update (status, type)
+        this.shifts.update(current => current.map(s =>
+           s.id === updatedShift.id ? { ...s, ...updatedShift } : s
+        ));
+    }
   }
 
   deleteShift(shiftId: string) {
+    this.saveSnapshot();
     this.shifts.update(current => current.filter(s => s.id !== shiftId));
   }
 
-  // Logic to handle midnight crossing
-  // If a shift is 22:00 -> 02:00, it returns two shift objects
+  // --- Logic: Midnight Crossing ---
   normalizeShift(staffId: string, date: string, start: string, end: string): Shift[] {
+    // ... same as before, but ensure ID generation uses a simple random for prototype
     const startMins = DateUtils.timeToMinutes(start);
     const endMins = DateUtils.timeToMinutes(end);
+    const shifts: Shift[] = [];
+    const base = {
+       staffId,
+       source: 'manual' as const,
+       status: 'draft' as const,
+       type: 'standard' as const
+    };
 
-    // Case 1: Normal shift (start < end)
     if (startMins < endMins) {
-      return [{
-        id: crypto.randomUUID(),
-        staffId,
-        date,
-        start,
-        end,
-        status: 'draft',
-        source: 'manual'
-      }];
+       shifts.push({ ...base, id: crypto.randomUUID(), date, start, end });
+    } else {
+       // Split
+       const groupId = crypto.randomUUID();
+       shifts.push({ ...base, id: crypto.randomUUID(), date, start, end: '24:00', shiftGroupId: groupId });
+       const nextDate = DateUtils.addDays(new Date(date), 1);
+       shifts.push({ ...base, id: crypto.randomUUID(), date: DateUtils.formatDate(nextDate), start: '00:00', end, shiftGroupId: groupId });
     }
+    return shifts;
+  }
 
-    // Case 2: Crossing midnight (start > end) e.g. 22:00 -> 02:00
-    // Split into:
-    // 1. Date @ start -> 24:00
-    // 2. Date+1 @ 00:00 -> end
-    const groupId = crypto.randomUUID();
-    const nextDate = DateUtils.addDays(new Date(date), 1);
-    const nextDateStr = DateUtils.formatDate(nextDate);
+  // --- Logic: Auto Distribute (Greedy) ---
+  autoDistribute() {
+    this.saveSnapshot();
+    // 1. Identify Gaps based on Requirements vs Coverage
+    // For prototype, let's just find random gaps in requirements and fill them
+    const dateStr = DateUtils.formatDate(this.currentDate());
+    const reqs = this.requirements();
+    const currentShifts = this.shiftsForCurrentDate();
+    const staff = this.staff(); // All staff (or filtered?) - usually all available
 
-    return [
-      {
-        id: crypto.randomUUID(),
-        staffId,
-        date,
-        start,
-        end: '24:00',
-        status: 'draft',
-        shiftGroupId: groupId,
-        source: 'manual'
-      },
-      {
-        id: crypto.randomUUID(),
-        staffId,
-        date: nextDateStr,
-        start: '00:00',
-        end,
-        status: 'draft',
-        shiftGroupId: groupId,
-        source: 'manual'
-      }
-    ];
+    // Simple Heuristic: For each requirement, check if minStaff is met.
+    // If not, find a staff member of that role who is NOT working in that slot.
+
+    const newShifts: Shift[] = [];
+
+    reqs.forEach(req => {
+       const reqStart = DateUtils.timeToMinutes(req.start);
+       const reqEnd = DateUtils.timeToMinutes(req.end);
+
+       // Check coverage roughly (middle of requirement)
+       // A real algo would check every bucket. Simplified: check start.
+       const workingCount = currentShifts.filter(s => {
+          const sStart = DateUtils.timeToMinutes(s.start);
+          const sEnd = DateUtils.timeToMinutes(s.end);
+          // Overlap check
+          const staffMember = staff.find(st => st.id === s.staffId);
+          return staffMember?.role === req.role && Math.max(reqStart, sStart) < Math.min(reqEnd, sEnd);
+       }).length;
+
+       if (workingCount < req.minStaff) {
+          const needed = req.minStaff - workingCount;
+
+          // Find candidates
+          const candidates = staff.filter(s => s.role === req.role && !currentShifts.some(shift => shift.staffId === s.id)); // Not working at all today (simplified)
+
+          for (let i = 0; i < needed && i < candidates.length; i++) {
+             const cand = candidates[i];
+             // Create shift
+             newShifts.push({
+               id: crypto.randomUUID(),
+               staffId: cand.id,
+               date: dateStr,
+               start: req.start,
+               end: req.end,
+               type: 'standard',
+               status: 'draft',
+               source: 'auto'
+             });
+          }
+       }
+    });
+
+    if (newShifts.length > 0) {
+      this.shifts.update(curr => [...curr, ...newShifts]);
+      return true; // Changes made
+    }
+    return false;
   }
 }

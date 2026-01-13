@@ -11,18 +11,18 @@
            (mousemove)="onTimelineMouseMove($event)"
            (mouseleave)="onTimelineMouseLeave()">
 
-        <!-- Markers -->
+        <!-- Markers: 24h -->
         <div class="markers-container">
            @for(h of hours; track h; let i = $index) {
              @if(i < 24) {
                 <div class="hour-block">
-                  <!-- Label (only for 0, 6, 12, 18, 24) -->
                   @if(h % 6 === 0) {
                      <span class="time-label dominant">{{ h }}:00</span>
                   } @else {
                      <span class="time-label">{{ h }}:00</span>
                   }
                   <div class="tick-mark"></div>
+                  <!-- Micro-ticks for 15 mins (CSS) -->
                 </div>
              }
            }
@@ -54,7 +54,7 @@
            <div class="coverage-bucket"
                 [class.has-staff]="bucket.count > 0"
                 [class.no-staff]="bucket.count === 0"
-                [title]="bucket.time + ': ' + bucket.count + ' staff'">
+                [title]="bucket.timeStr + ': ' + bucket.count + ' staff'">
            </div>
          }
        </div>
@@ -85,9 +85,8 @@
                <p class="resource-name">{{ staff.fullName }}</p>
                <div class="resource-meta">
                  <span class="role-text">{{ staff.role }}</span>
-                 @if(staff.homeOffice) {
-                   <span class="material-symbols-outlined icon-small" title="Home Office">home</span>
-                 }
+                 <!-- Monthly hours (Mocked display) -->
+                 <span class="hours-badge">{{ staff.monthlyHours }}h</span>
                </div>
              </div>
           </div>
@@ -97,32 +96,61 @@
                (mousemove)="onTimelineMouseMove($event)"
                (mouseleave)="onTimelineMouseLeave()">
 
-             <!-- Grid Lines -->
+             <!-- Grid Lines (Every Hour) -->
              <div class="lane-grid">
                 @for(h of hours; track h) {
                    @if(h < 24) {
-                     <div class="grid-line"></div>
+                     <div class="grid-line">
+                        <div class="sub-grid-line"></div>
+                        <div class="sub-grid-line"></div>
+                        <div class="sub-grid-line"></div>
+                     </div>
                    }
                 }
              </div>
 
              <!-- Shifts -->
              @for(shift of shiftsMap().get(staff.id); track shift.id) {
+               <!-- Only render if not being dragged currently (optional, here we keep original until drop) -->
                <div class="shift-bar"
                     [ngStyle]="getShiftStyle(shift)"
+                    [class.type-exception]="shift.type === 'exception'"
+                    [class.type-overtime]="shift.type === 'overtime'"
                     [class.is-draft]="shift.status === 'draft'"
-                    [title]="shift.start + ' - ' + shift.end">
+                    (mousedown)="startDrag($event, shift, 'move')"
+                    (click)="openEditDialog(shift, $event)">
 
-                  <span class="shift-text">{{ shift.start }} - {{ shift.end }}</span>
-                  @if(shift.status === 'draft') {
-                    <span class="draft-indicator"></span>
-                  }
+                  <!-- Resize Handles -->
+                  <div class="resize-handle left" (mousedown)="startDrag($event, shift, 'resize-start')"></div>
+
+                  <div class="shift-content">
+                    <span class="shift-text">{{ shift.start }} - {{ shift.end }}</span>
+                    @if(shift.status === 'draft') { <span class="draft-indicator"></span> }
+                  </div>
+
+                  <div class="resize-handle right" (mousedown)="startDrag($event, shift, 'resize-end')"></div>
                </div>
              }
+
+             <!-- Drag Ghost -->
+             @if(isDragging() && draggedShift()?.staffId === staff.id) {
+               <div class="shift-ghost" [ngStyle]="getGhostStyle()">
+                  <span class="ghost-label">{{ dragGhost()?.start }} - {{ dragGhost()?.end }}</span>
+               </div>
+             }
+
           </div>
         </div>
       }
     }
   </div>
+
+  <app-shift-edit-dialog
+    [isOpen]="isDialogOpen()"
+    [shift]="selectedShift()"
+    (closeEvent)="closeDialog()"
+    (saveEvent)="saveShift($event)"
+    (deleteEvent)="deleteShift($event)">
+  </app-shift-edit-dialog>
 
 </div>
