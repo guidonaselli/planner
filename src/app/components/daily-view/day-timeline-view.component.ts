@@ -4,11 +4,12 @@ import { ShiftService } from '../../services/shift.service';
 import { DateUtils } from '../../utils/date-utils';
 import { StaffMember, Shift } from '../../models/shift-planner.models';
 import { ShiftEditDialogComponent } from '../shift-edit-dialog/shift-edit-dialog.component';
+import { PersonDetailsDialogComponent } from '../person-details-dialog/person-details-dialog.component';
 
 @Component({
   selector: 'app-day-timeline-view',
   standalone: true,
-  imports: [CommonModule, ShiftEditDialogComponent],
+  imports: [CommonModule, ShiftEditDialogComponent, PersonDetailsDialogComponent],
   templateUrl: './day-timeline-view.component.html',
   styleUrls: ['./day-timeline-view.component.css']
 })
@@ -17,8 +18,6 @@ export class DayTimelineViewComponent {
 
   // Hours (0-24)
   hours = Array.from({length: 25}, (_, i) => i);
-  // Grid columns: 24h * 4 (15min) = 96 slots
-  // But strictly, visual grid lines usually at hours.
 
   // Hover & DnD State
   hoverTime = signal<string | null>(null);
@@ -36,6 +35,29 @@ export class DayTimelineViewComponent {
   // Dialog State
   isDialogOpen = signal(false);
   selectedShift = signal<Shift | null>(null);
+
+  // Person Details State
+  isPersonDialogOpen = signal(false);
+  selectedPerson = signal<StaffMember | null>(null);
+
+  // Group Collapse State
+  collapsedGroups = signal<Set<string>>(new Set());
+
+  toggleGroup(role: string) {
+    this.collapsedGroups.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(role)) {
+        newSet.delete(role);
+      } else {
+        newSet.add(role);
+      }
+      return newSet;
+    });
+  }
+
+  isGroupCollapsed(role: string): boolean {
+    return this.collapsedGroups().has(role);
+  }
 
   groupedStaff = computed(() => {
     const staff = this.shiftService.filteredStaff();
@@ -282,7 +304,16 @@ export class DayTimelineViewComponent {
   saveShift(data: Partial<Shift>) {
     const current = this.selectedShift();
     if (current) {
-      this.shiftService.updateShift({ id: current.id, ...data });
+      // Check if this is a new shift (not in store)
+      const exists = this.shiftService.shifts().some(s => s.id === current.id);
+
+      if (exists) {
+        this.shiftService.updateShift({ id: current.id, ...data });
+      } else {
+        // Create new
+        const newShift = { ...current, ...data } as Shift;
+        this.shiftService.addShift(newShift);
+      }
     }
     this.closeDialog();
   }
@@ -290,5 +321,15 @@ export class DayTimelineViewComponent {
   deleteShift(id: string) {
     this.shiftService.deleteShift(id);
     this.closeDialog();
+  }
+
+  openPersonDetails(staff: StaffMember) {
+    this.selectedPerson.set(staff);
+    this.isPersonDialogOpen.set(true);
+  }
+
+  closePersonDialog() {
+    this.isPersonDialogOpen.set(false);
+    this.selectedPerson.set(null);
   }
 }

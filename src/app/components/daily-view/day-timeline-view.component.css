@@ -66,6 +66,8 @@
   position: relative;
   border-left: 1px solid var(--border-color);
   height: 100%;
+  display: flex; /* Ensure labels align */
+  flex-direction: column;
 }
 
 .end-marker {
@@ -83,6 +85,7 @@
   color: var(--text-secondary);
   opacity: 0;
   transition: opacity 0.2s;
+  white-space: nowrap; /* Prevent vertical stacking */
 }
 
 .time-label.dominant {
@@ -378,3 +381,8 @@
   padding: 1px 4px;
   border-radius: 4px;
 }
+
+/* Utils */
+.transform { transform-box: fill-box; }
+.-rotate-90 { transform: rotate(-90deg); }
+.transition-transform { transition: transform 0.2s; }

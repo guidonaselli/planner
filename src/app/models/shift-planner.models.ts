@@ -13,6 +13,7 @@ export interface StaffMember {
   fullName: string;
   role: Role;
   homeOffice: boolean; // Keep mainly for visual info if needed
+  phone: string;
 
   // Accumulated stats for the month (mocked)
   monthlyHours: number;
