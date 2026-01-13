@@ -82,7 +82,7 @@ import { DateUtils } from '../../utils/date-utils';
        <div class="group-toggle-container">
          <span class="toggle-label">Agrupar Roles</span>
          <button
-           (click)="shiftService.groupByRole.update(v => !v)"
+           (click)="toggleGroupByRole()"
            [class.active]="shiftService.groupByRole()"
            class="switch-btn">
             <div class="switch-handle"></div>
@@ -300,5 +300,9 @@ export class FiltersBarComponent {
 
   updateRoles(val: any) {
     this.shiftService.filterRoles.set(val);
+  }
+
+  toggleGroupByRole() {
+    this.shiftService.groupByRole.update(v => !v);
   }
 }
