@@ -1,0 +1,84 @@
+.shift-planner-scope {
+  --primary: #135bec;
+  --primary-hover: #1d4ed8;
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f1f5f9;
+  --border-color: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --success: #10b981;
+  --success-bg: #d1fae5;
+  --success-border: #6ee7b7;
+  --warning: #f59e0b;
+  --warning-bg: #fef3c7;
+  --warning-border: #fcd34d;
+  --danger: #ef4444;
+  --danger-bg: #fee2e2;
+  --danger-border: #fca5a5;
+  --header-height: 70px;
+  --timeline-header-height: 80px;
+  --sidebar-width: 260px;
+  --lane-height: 56px;
+  --grid-line-color: #e2e8f0;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-primary);
+  background-color: var(--bg-app);
+}
+
+.shift-planner-scope .material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}
+
+.shift-planner-scope .flex { display: flex; }
+.shift-planner-scope .flex-col { flex-direction: column; }
+.shift-planner-scope .items-center { align-items: center; }
+.shift-planner-scope .justify-between { justify-content: space-between; }
+.shift-planner-scope .justify-center { justify-content: center; }
+.shift-planner-scope .gap-1 { gap: 4px; }
+.shift-planner-scope .gap-2 { gap: 8px; }
+.shift-planner-scope .gap-3 { gap: 12px; }
+.shift-planner-scope .gap-4 { gap: 16px; }
+.shift-planner-scope .w-full { width: 100%; }
+.shift-planner-scope .h-full { height: 100%; }
+.shift-planner-scope .relative { position: relative; }
+.shift-planner-scope .absolute { position: absolute; }
+.shift-planner-scope .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+.shift-planner-scope .sticky { position: sticky; }
+.shift-planner-scope .shrink-0 { flex-shrink: 0; }
+.shift-planner-scope .flex-1 { flex: 1; }
+.shift-planner-scope .overflow-hidden { overflow: hidden; }
+.shift-planner-scope .overflow-y-auto { overflow-y: auto; }
+.shift-planner-scope .cursor-pointer { cursor: pointer; }
+.shift-planner-scope .text-sm { font-size: 0.875rem; }
+.shift-planner-scope .text-xs { font-size: 0.75rem; }
+.shift-planner-scope .font-bold { font-weight: 700; }
+.shift-planner-scope .font-semibold { font-weight: 600; }
+.shift-planner-scope .font-medium { font-weight: 500; }
+.shift-planner-scope .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.shift-planner-scope *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.shift-planner-scope *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.shift-planner-scope *::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.shift-planner-scope *::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
