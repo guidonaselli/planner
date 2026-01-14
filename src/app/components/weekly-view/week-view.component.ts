@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ShiftService } from '../../services/shift.service';
 import { DateUtils } from '../../utils/date-utils';
 import { StaffMember, Shift } from '../../models/shift-planner.models';
+import { RecurrenceConfig } from '../../models/recurrence.model';
 import { ShiftEditDialogComponent } from '../shift-edit-dialog/shift-edit-dialog.component';
 import { PersonDetailsDialogComponent } from '../person-details-dialog/person-details-dialog.component';
 
@@ -19,6 +20,7 @@ export class WeekViewComponent {
   // Dialog State
   isDialogOpen = signal(false);
   selectedShift = signal<Shift | null>(null);
+  isNewEntry = signal(false);
 
   // Person Details State
   isPersonDialogOpen = signal(false);
@@ -98,12 +100,14 @@ export class WeekViewComponent {
       status: 'draft',
       source: 'manual'
     };
+    this.isNewEntry.set(true);
     this.selectedShift.set(newShift);
     this.isDialogOpen.set(true);
   }
 
   onShiftClick(event: MouseEvent, shift: Shift) {
     event.stopPropagation();
+    this.isNewEntry.set(false);
     this.selectedShift.set(shift);
     this.isDialogOpen.set(true);
   }
@@ -111,9 +115,11 @@ export class WeekViewComponent {
   closeDialog() {
     this.isDialogOpen.set(false);
     this.selectedShift.set(null);
+    this.isNewEntry.set(false);
   }
 
-  saveShift(data: Partial<Shift>) {
+  saveShift(eventData: { shift: Partial<Shift>, recurrence?: RecurrenceConfig }) {
+    const { shift: data, recurrence } = eventData;
     const current = this.selectedShift();
     if (current) {
       const exists = this.shiftService.shifts().some(s => s.id === current.id);
@@ -121,14 +127,73 @@ export class WeekViewComponent {
         this.shiftService.updateShift({ id: current.id, ...data });
       } else {
         const newShift = { ...current, ...data } as Shift;
-        this.shiftService.addShift(newShift);
+        if (recurrence && recurrence.active) {
+          this.handleRecurrence(newShift, recurrence);
+        } else {
+          this.shiftService.addShift(newShift);
+        }
       }
     }
     this.closeDialog();
   }
 
-  deleteShift(id: string) {
-    this.shiftService.deleteShift(id);
+  handleRecurrence(baseShift: Shift, config: RecurrenceConfig) {
+    const currentWeekStart = DateUtils.getStartOfWeek(this.shiftService.currentDate());
+    const shiftsToAdd: Shift[] = [];
+    const recurrenceGroupId = crypto.randomUUID();
+    const maxWeeks = Math.max(1, config.weeks || 1);
+    const untilDate = config.untilDate ? new Date(config.untilDate) : null;
+
+    let weekOffset = 0;
+    let keepGoing = true;
+
+    while (keepGoing) {
+      const weekStart = DateUtils.addDays(currentWeekStart, weekOffset * 7);
+
+      for (let i = 0; i < 7; i++) {
+        const dayDate = DateUtils.addDays(weekStart, i);
+        if (untilDate && dayDate > untilDate) {
+          keepGoing = false;
+          break;
+        }
+
+        const dayIndex = dayDate.getDay();
+
+        let shouldAdd = false;
+        if (config.mode === 'week') {
+          shouldAdd = true;
+        } else {
+          shouldAdd = config.days[dayIndex];
+        }
+
+        if (shouldAdd) {
+          shiftsToAdd.push({
+            ...baseShift,
+            id: crypto.randomUUID(),
+            date: DateUtils.formatDate(dayDate),
+            status: 'draft',
+            recurrenceGroupId
+          });
+        }
+      }
+
+      weekOffset++;
+      if (!untilDate && weekOffset >= maxWeeks) {
+        keepGoing = false;
+      }
+    }
+
+    shiftsToAdd.forEach(s => this.shiftService.addShift(s));
+  }
+
+  deleteShift(eventData: { id: string, scope: 'single' | 'series' | 'futureWeekday' }) {
+    if (eventData.scope === 'series') {
+      this.shiftService.deleteShiftSeries(eventData.id);
+    } else if (eventData.scope === 'futureWeekday') {
+      this.shiftService.deleteShiftSeriesFrom(eventData.id, 'weekday');
+    } else {
+      this.shiftService.deleteShift(eventData.id);
+    }
     this.closeDialog();
   }
 

@@ -225,6 +225,21 @@ export class DayTimelineViewComponent {
        .join(', ');
   }
 
+  getCoverageBucketTitle(time: string): string {
+    const staff = this.getStaffAtTime(time);
+    if (staff.length === 0) {
+      return `${time}: Sin personal activo`;
+    }
+
+    const maxNames = 4;
+    const names = staff.map(s => s.fullName);
+    const visible = names.slice(0, maxNames).join(', ');
+    const remaining = names.length - maxNames;
+    const more = remaining > 0 ? ` +${remaining}` : '';
+
+    return `${time}: ${visible}${more}`;
+  }
+
   shortenRole(role: string): string {
     const map: Record<string, string> = {
       "Coordinador de técnicos": "Coord.",
@@ -400,47 +415,61 @@ export class DayTimelineViewComponent {
   }
 
   handleRecurrence(baseShift: Shift, config: RecurrenceConfig) {
-      // Generate shifts based on config
-      // Start of week or current week context?
-      // Logic: "Assign to people in the whole week".
-      // We assume we populate the CURRENT week.
       const currentWeekStart = DateUtils.getStartOfWeek(this.shiftService.currentDate());
-
       const shiftsToAdd: Shift[] = [];
+      const recurrenceGroupId = crypto.randomUUID();
+      const maxWeeks = Math.max(1, config.weeks || 1);
+      const untilDate = config.untilDate ? new Date(config.untilDate) : null;
 
-      for (let i = 0; i < 7; i++) {
-         const dayDate = DateUtils.addDays(currentWeekStart, i); // Sun, Mon, Tue...
-         // Config.days index 0 = Sun?
-         // JS getDay(): 0=Sun.
-         // `daysOfWeek` in Dialog was ['D', 'L'...] so 0=Dom.
-         // `recurrence.days` is boolean array [Sun, Mon, Tue...]
-         const dayIndex = dayDate.getDay();
+      let weekOffset = 0;
+      let keepGoing = true;
 
-         let shouldAdd = false;
-         if (config.mode === 'week') {
-            shouldAdd = true; // All days
-         } else {
-            shouldAdd = config.days[dayIndex];
+      while (keepGoing) {
+         const weekStart = DateUtils.addDays(currentWeekStart, weekOffset * 7);
+
+         for (let i = 0; i < 7; i++) {
+            const dayDate = DateUtils.addDays(weekStart, i);
+            if (untilDate && dayDate > untilDate) {
+               keepGoing = false;
+               break;
+            }
+
+            const dayIndex = dayDate.getDay();
+            let shouldAdd = false;
+            if (config.mode === 'week') {
+               shouldAdd = true;
+            } else {
+               shouldAdd = config.days[dayIndex];
+            }
+
+            if (shouldAdd) {
+               shiftsToAdd.push({
+                  ...baseShift,
+                  id: crypto.randomUUID(),
+                  date: DateUtils.formatDate(dayDate),
+                  status: 'draft',
+                  recurrenceGroupId
+               });
+            }
          }
 
-         if (shouldAdd) {
-            shiftsToAdd.push({
-               ...baseShift,
-               id: crypto.randomUUID(),
-               date: DateUtils.formatDate(dayDate),
-               status: 'draft'
-            });
+         weekOffset++;
+         if (!untilDate && weekOffset >= maxWeeks) {
+            keepGoing = false;
          }
       }
 
-      // Batch add? Service has addShift (single).
-      // We should probably loop or add bulk add to service.
-      // For now loop.
       shiftsToAdd.forEach(s => this.shiftService.addShift(s));
   }
 
-  deleteShift(id: string) {
-    this.shiftService.deleteShift(id);
+  deleteShift(eventData: { id: string, scope: 'single' | 'series' | 'futureWeekday' }) {
+    if (eventData.scope === 'series') {
+      this.shiftService.deleteShiftSeries(eventData.id);
+    } else if (eventData.scope === 'futureWeekday') {
+      this.shiftService.deleteShiftSeriesFrom(eventData.id, 'weekday');
+    } else {
+      this.shiftService.deleteShift(eventData.id);
+    }
     this.closeDialog();
   }
 

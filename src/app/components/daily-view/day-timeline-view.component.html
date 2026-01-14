@@ -55,7 +55,7 @@
            <div class="coverage-bucket"
                 [class.has-staff]="bucket.count > 0"
                 [class.no-staff]="bucket.count === 0"
-                [title]="bucket.timeStr + ': ' + bucket.count + ' staff'"
+                [title]="getCoverageBucketTitle(bucket.timeStr)"
                 (click)="openCoverageDetails(bucket)">
            </div>
          }

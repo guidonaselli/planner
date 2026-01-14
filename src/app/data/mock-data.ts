@@ -1,4 +1,4 @@
-import { StaffMember, CoverageRequirement, Holiday, Shift, Role } from '../models/shift-planner.models';
+import { StaffMember, CoverageRequirement, Holiday, Shift, Role, DailyRoleMinimum } from '../models/shift-planner.models';
 
 const NAMES = [
   "Tomas García", "Sofía Martínez", "Nicolás Fernández", "Valentina López", "Matías Romero",
@@ -43,6 +43,14 @@ const REQS: CoverageRequirement[] = [
   { id: "r3", role: "Operario monitoreo", start: "16:00", end: "24:00", minStaff: 3 },
   { id: "r4", role: "Supervisor monitoreo", start: "08:00", end: "18:00", minStaff: 1 },
   { id: "r5", role: "Técnico de campo", start: "08:00", end: "17:00", minStaff: 3 }
+];
+
+const DAILY_ROLE_MINIMUMS: DailyRoleMinimum[] = [
+  { role: "Coordinador de técnicos", minDaily: 1 },
+  { role: "Técnico de campo", minDaily: 2 },
+  { role: "Técnico laboratorio", minDaily: 2 },
+  { role: "Operario monitoreo", minDaily: 4 },
+  { role: "Supervisor monitoreo", minDaily: 1 }
 ];
 
 const HOLIDAYS: Holiday[] = [
@@ -107,6 +115,7 @@ const SHIFTS = generateShifts(STAFF);
 export const MOCK_DATA = {
   staff: STAFF,
   requirements: REQS,
+  dailyRoleMinimums: DAILY_ROLE_MINIMUMS,
   holidays: HOLIDAYS,
   shifts: SHIFTS
 };

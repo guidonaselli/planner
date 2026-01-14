@@ -33,6 +33,7 @@ export interface Shift {
   status: ShiftStatus;
 
   shiftGroupId?: string; // Linked split shifts
+  recurrenceGroupId?: string; // Linked recurring shifts
   source?: "manual" | "auto";
 }
 
@@ -42,6 +43,11 @@ export interface CoverageRequirement {
   start: string; // "HH:MM"
   end: string;   // "HH:MM"
   minStaff: number;
+}
+
+export interface DailyRoleMinimum {
+  role: Role;
+  minDaily: number;
 }
 
 export interface Holiday {

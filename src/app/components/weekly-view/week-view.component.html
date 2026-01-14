@@ -96,6 +96,7 @@
   <app-shift-edit-dialog
     [isOpen]="isDialogOpen()"
     [shift]="selectedShift()"
+    [isNewEntry]="isNewEntry()"
     (closeEvent)="closeDialog()"
     (saveEvent)="saveShift($event)"
     (deleteEvent)="deleteShift($event)">

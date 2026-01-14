@@ -8,6 +8,7 @@ import { ShiftService } from '../../services/shift.service';
   standalone: true,
   imports: [CommonModule],
   template: `
+    @if (isOpen) {
     <div class="modal-overlay" (click)="close()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <header class="modal-header">
@@ -61,6 +62,7 @@ import { ShiftService } from '../../services/shift.service';
         </footer>
       </div>
     </div>
+    }
   `,
   styles: [`
     @keyframes fadeIn {

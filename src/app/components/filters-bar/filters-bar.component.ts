@@ -81,9 +81,11 @@ import { Role } from '../../models/shift-planner.models';
       <button
          (click)="toggleActiveNow()"
          [class.active]="shiftService.filterActiveNow()"
+         [attr.aria-pressed]="shiftService.filterActiveNow()"
          class="icon-btn-toggle"
-         title="Activos ahora">
+         [title]="shiftService.filterActiveNow() ? 'Activos ahora: activado' : 'Activos ahora: desactivado'">
          <span class="material-symbols-outlined">schedule</span>
+         <span class="btn-text">Activos ahora</span>
       </button>
 
       <!-- Search -->
@@ -260,6 +262,45 @@ import { Role } from '../../models/shift-planner.models';
       background-color: var(--bg-surface-hover);
       color: var(--primary);
       font-weight: 600;
+    }
+
+    /* Active Now Toggle */
+    .icon-btn-toggle {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+      white-space: nowrap;
+    }
+    .icon-btn-toggle:hover {
+      background-color: var(--bg-surface-hover);
+      color: var(--text-primary);
+    }
+    .icon-btn-toggle:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(19, 91, 236, 0.25);
+    }
+    .icon-btn-toggle.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+      box-shadow: 0 6px 14px rgba(19, 91, 236, 0.25);
+    }
+    .icon-btn-toggle.active .material-symbols-outlined {
+      color: white;
+    }
+    .icon-btn-toggle .btn-text {
+      line-height: 1;
+      letter-spacing: 0.2px;
     }
 
     /* Search Box */

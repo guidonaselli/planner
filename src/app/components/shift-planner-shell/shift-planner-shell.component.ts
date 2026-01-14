@@ -1,14 +1,15 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ShiftService } from '../../services/shift.service';
 import { FiltersBarComponent } from '../filters-bar/filters-bar.component';
 import { DayTimelineViewComponent } from '../daily-view/day-timeline-view.component';
 import { WeekViewComponent } from '../weekly-view/week-view.component';
+import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.component';
 
 @Component({
   selector: 'app-shift-planner-shell',
   standalone: true,
-  imports: [CommonModule, FiltersBarComponent, DayTimelineViewComponent, WeekViewComponent],
+  imports: [CommonModule, FiltersBarComponent, DayTimelineViewComponent, WeekViewComponent, SettingsDialogComponent],
   template: `
     <div class="shell-container">
       <!-- Top Navigation / Header -->
@@ -48,8 +49,11 @@ import { WeekViewComponent } from '../weekly-view/week-view.component';
               </button>
             </div>
 
-            <!-- Actions -->
-            <div class="action-buttons">
+           <!-- Actions -->
+           <div class="action-buttons">
+               <button class="btn-icon" (click)="isSettingsOpen.set(true)" title="Configuracion">
+                  <span class="material-symbols-outlined">settings</span>
+               </button>
                <button class="btn-text" (click)="shiftService.autoDistribute()">
                  <span class="material-symbols-outlined icon-sm">auto_awesome</span>
                  Auto Asignar
@@ -71,6 +75,11 @@ import { WeekViewComponent } from '../weekly-view/week-view.component';
           <app-week-view></app-week-view>
         }
       </main>
+
+      <app-settings-dialog
+        [isOpen]="isSettingsOpen()"
+        (closeEvent)="isSettingsOpen.set(false)">
+      </app-settings-dialog>
     </div>
   `,
   styles: [`
@@ -211,4 +220,5 @@ import { WeekViewComponent } from '../weekly-view/week-view.component';
 })
 export class ShiftPlannerShellComponent {
   shiftService = inject(ShiftService);
+  isSettingsOpen = signal(false);
 }

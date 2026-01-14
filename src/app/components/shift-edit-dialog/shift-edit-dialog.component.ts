@@ -52,12 +52,27 @@ import { RecurrenceConfig } from '../../models/recurrence.model';
                    </div>
                  </div>
 
-                 @if(recurrenceActive) {
+                @if(recurrenceActive) {
                     <div class="recurrence-details">
-                       <select [(ngModel)]="recurrence.mode" class="form-input small">
-                          <option value="week">Toda la semana</option>
-                          <option value="custom">Días específicos</option>
-                       </select>
+                      <div class="repeat-mode">
+                        <div class="radio-option">
+                          <input type="radio" name="repeatMode" [value]="'weeks'" [ngModel]="repeatMode" (ngModelChange)="repeatMode = 'weeks'">
+                          <span>Semanas</span>
+                        </div>
+                        <div class="radio-option">
+                          <input type="radio" name="repeatMode" [value]="'until'" [ngModel]="repeatMode" (ngModelChange)="repeatMode = 'until'">
+                          <span>Hasta fecha</span>
+                        </div>
+                      </div>
+                      <div class="repeat-weeks">
+                        <label>Semanas</label>
+                        <input type="number" min="1" max="52" [(ngModel)]="recurrence.weeks" class="form-input small" [disabled]="repeatMode !== 'weeks'">
+                        <input type="date" class="form-input small" [(ngModel)]="recurrence.untilDate" [disabled]="repeatMode !== 'until'">
+                      </div>
+                      <select [(ngModel)]="recurrence.mode" class="form-input small">
+                         <option value="week">Toda la semana</option>
+                         <option value="custom">Días específicos</option>
+                      </select>
 
                        @if(recurrence.mode === 'custom') {
                           <div class="days-selector">
@@ -77,12 +92,26 @@ import { RecurrenceConfig } from '../../models/recurrence.model';
 
           <div class="dialog-footer">
             @if(!isNew) {
-              <button class="btn btn-danger" (click)="delete()">Eliminar</button>
+              <button class="btn btn-danger" (click)="requestDelete()">Eliminar</button>
             }
             <div class="spacer"></div>
             <button class="btn btn-secondary" (click)="close()">Cancelar</button>
             <button class="btn btn-primary" (click)="save()">Guardar</button>
           </div>
+          @if(showDeleteOptions && shift?.recurrenceGroupId) {
+            <div class="delete-overlay" (click)="cancelDelete()">
+              <div class="delete-modal" (click)="$event.stopPropagation()">
+                <span class="delete-title">Eliminar turno recurrente</span>
+                <p class="delete-subtitle">Elegí el alcance de la eliminacion.</p>
+                <div class="delete-actions">
+                  <button class="btn btn-danger" (click)="deleteSingle()">Solo este día</button>
+                  <button class="btn btn-danger ghost" (click)="deleteFutureWeekday()">Este día de la semana en adelante</button>
+                  <button class="btn btn-danger ghost" (click)="deleteSeries()">Toda la serie</button>
+                </div>
+                <button class="btn btn-secondary" (click)="cancelDelete()">Cancelar</button>
+              </div>
+            </div>
+          }
         </div>
       </div>
     }
@@ -130,6 +159,9 @@ import { RecurrenceConfig } from '../../models/recurrence.model';
     .recurrence-options { display: flex; gap: 16px; margin-bottom: 8px; }
     .radio-option { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; cursor: pointer; }
     .recurrence-details { display: flex; flex-direction: column; gap: 8px; }
+    .repeat-mode { display: flex; gap: 16px; align-items: center; }
+    .repeat-weeks { display: flex; align-items: center; gap: 8px; }
+    .repeat-weeks label { font-size: 0.75rem; font-weight: 600; color: #64748b; }
 
     .days-selector { display: flex; justify-content: space-between; gap: 4px; }
     .day-check {
@@ -158,6 +190,30 @@ import { RecurrenceConfig } from '../../models/recurrence.model';
     .btn-primary { background: #135bec; color: white; }
     .btn-secondary { background: #e2e8f0; color: #475569; }
     .btn-danger { background: #fee2e2; color: #ef4444; }
+    .btn-danger.ghost { background: #fff1f2; color: #ef4444; }
+
+    .delete-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1100;
+    }
+    .delete-modal {
+      width: 360px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .delete-title { font-size: 0.85rem; font-weight: 700; color: #ef4444; text-transform: uppercase; }
+    .delete-subtitle { margin: 0; font-size: 0.75rem; color: #64748b; }
+    .delete-actions { display: flex; flex-direction: column; gap: 8px; }
   `]
 })
 export class ShiftEditDialogComponent {
@@ -165,7 +221,7 @@ export class ShiftEditDialogComponent {
   @Input() shift: Shift | null = null;
   @Output() closeEvent = new EventEmitter<void>();
   @Output() saveEvent = new EventEmitter<{ shift: Partial<Shift>, recurrence?: RecurrenceConfig }>();
-  @Output() deleteEvent = new EventEmitter<string>();
+  @Output() deleteEvent = new EventEmitter<{ id: string, scope: 'single' | 'series' | 'futureWeekday' }>();
 
   editData: Partial<Shift> = { start: '08:00', end: '16:00', type: 'standard' };
   isNew = true;
@@ -175,9 +231,13 @@ export class ShiftEditDialogComponent {
   recurrence: RecurrenceConfig = {
     active: false,
     mode: 'week',
-    days: [false, true, true, true, true, true, false] // Default Mon-Fri
+    days: [false, true, true, true, true, true, false], // Default Mon-Fri
+    weeks: 1,
+    untilDate: ''
   };
   daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S']; // Sun to Sat
+  showDeleteOptions = false;
+  repeatMode: 'weeks' | 'until' = 'weeks';
 
   ngOnChanges() {
     if (this.shift) {
@@ -191,6 +251,10 @@ export class ShiftEditDialogComponent {
     // Reset recurrence
     this.recurrenceActive = false;
     this.recurrence.active = false;
+    this.recurrence.weeks = 1;
+    this.recurrence.untilDate = '';
+    this.repeatMode = 'weeks';
+    this.showDeleteOptions = false;
   }
 
   // To fix the isNew issue, I'll use the fact that I control the parent.
@@ -202,6 +266,12 @@ export class ShiftEditDialogComponent {
   setRecurrence(active: boolean) {
      this.recurrenceActive = active;
      this.recurrence.active = active;
+     if (!this.recurrence.weeks || this.recurrence.weeks < 1) {
+       this.recurrence.weeks = 1;
+     }
+     if (this.repeatMode === 'until' && !this.recurrence.untilDate) {
+       this.recurrence.untilDate = '';
+     }
   }
 
   toggleDay(index: number) {
@@ -215,15 +285,48 @@ export class ShiftEditDialogComponent {
   }
 
   save() {
+    if (this.repeatMode === 'weeks') {
+      this.recurrence.untilDate = '';
+      if (!this.recurrence.weeks || this.recurrence.weeks < 1) {
+        this.recurrence.weeks = 1;
+      }
+    } else if (this.repeatMode === 'until') {
+      this.recurrence.weeks = 1;
+    }
     this.saveEvent.emit({
        shift: this.editData,
        recurrence: this.recurrenceActive ? this.recurrence : undefined
     });
   }
 
-  delete() {
-    if (this.shift) {
-      this.deleteEvent.emit(this.shift.id);
+  requestDelete() {
+    if (!this.shift) return;
+    if (this.shift.recurrenceGroupId) {
+      this.showDeleteOptions = true;
+    } else {
+      this.deleteSingle();
     }
+  }
+
+  deleteSingle() {
+    if (this.shift) {
+      this.deleteEvent.emit({ id: this.shift.id, scope: 'single' });
+    }
+  }
+
+  deleteSeries() {
+    if (this.shift) {
+      this.deleteEvent.emit({ id: this.shift.id, scope: 'series' });
+    }
+  }
+
+  deleteFutureWeekday() {
+    if (this.shift) {
+      this.deleteEvent.emit({ id: this.shift.id, scope: 'futureWeekday' });
+    }
+  }
+
+  cancelDelete() {
+    this.showDeleteOptions = false;
   }
 }

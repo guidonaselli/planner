@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, WritableSignal, Signal } from '@angular/core';
-import { StaffMember, Shift, CoverageRequirement, Holiday, Role, ShiftStatus } from '../models/shift-planner.models';
+import { StaffMember, Shift, CoverageRequirement, Holiday, Role, ShiftStatus, DailyRoleMinimum } from '../models/shift-planner.models';
 import { MOCK_DATA } from '../data/mock-data';
 import { DateUtils } from '../utils/date-utils';
 
@@ -15,6 +15,7 @@ export class ShiftService {
   staff: WritableSignal<StaffMember[]> = signal(MOCK_DATA.staff);
   shifts: WritableSignal<Shift[]> = signal(MOCK_DATA.shifts);
   requirements: WritableSignal<CoverageRequirement[]> = signal(MOCK_DATA.requirements);
+  dailyRoleMinimums: WritableSignal<DailyRoleMinimum[]> = signal(MOCK_DATA.dailyRoleMinimums);
   holidays: WritableSignal<Holiday[]> = signal(MOCK_DATA.holidays);
 
   // Undo/Redo Stacks (storing Shift[] snapshots)
@@ -160,7 +161,9 @@ export class ShiftService {
     const finalShifts = normalizedShifts.map(s => ({
        ...s,
        type: shift.type,
-       status: shift.status
+       status: shift.status,
+       source: shift.source ?? s.source,
+       recurrenceGroupId: shift.recurrenceGroupId
     }));
     this.shifts.update(current => [...current, ...finalShifts]);
   }
@@ -192,7 +195,8 @@ export class ShiftService {
             // Let's rely on new IDs for simplicity in split logic, except we want to track status.
             type: merged.type,
             status: merged.status,
-            source: merged.source
+            source: merged.source,
+            recurrenceGroupId: merged.recurrenceGroupId
         }));
 
         this.shifts.update(curr => {
@@ -210,6 +214,41 @@ export class ShiftService {
   deleteShift(shiftId: string) {
     this.saveSnapshot();
     this.shifts.update(current => current.filter(s => s.id !== shiftId));
+  }
+
+  deleteShiftSeries(shiftId: string) {
+    const current = this.shifts();
+    const target = current.find(s => s.id === shiftId);
+    if (!target || !target.recurrenceGroupId) {
+      this.deleteShift(shiftId);
+      return;
+    }
+
+    this.saveSnapshot();
+    this.shifts.update(curr => curr.filter(s => s.recurrenceGroupId !== target.recurrenceGroupId));
+  }
+
+  deleteShiftSeriesFrom(shiftId: string, mode: 'all' | 'weekday') {
+    const current = this.shifts();
+    const target = current.find(s => s.id === shiftId);
+    if (!target || !target.recurrenceGroupId) {
+      this.deleteShift(shiftId);
+      return;
+    }
+
+    const targetDate = new Date(target.date);
+    const targetWeekday = targetDate.getDay();
+
+    this.saveSnapshot();
+    this.shifts.update(curr => curr.filter(s => {
+      if (s.recurrenceGroupId !== target.recurrenceGroupId) return true;
+      const sDate = new Date(s.date);
+      if (sDate < targetDate) return true;
+      if (mode === 'weekday') {
+        return sDate.getDay() !== targetWeekday;
+      }
+      return false;
+    }));
   }
 
   publishChanges() {
@@ -251,35 +290,106 @@ export class ShiftService {
   autoDistribute() {
     this.saveSnapshot();
 
-    let daysToProcess: Date[] = [];
-
-    // Detect mode: Day vs Week
-    if (this.viewMode() === 'day') {
-      daysToProcess = [this.currentDate()];
-    } else {
-      // Process whole week
-      const start = DateUtils.getStartOfWeek(this.currentDate());
-      for (let i = 0; i < 7; i++) {
-        daysToProcess.push(DateUtils.addDays(start, i));
-      }
+    const daysToProcess: Date[] = [];
+    const start = DateUtils.getStartOfWeek(this.currentDate());
+    for (let i = 0; i < 7; i++) {
+      daysToProcess.push(DateUtils.addDays(start, i));
     }
 
     const newShifts: Shift[] = [];
     const allStaff = this.staff();
     const requirements = this.requirements();
+    const dailyMinimums = this.dailyRoleMinimums();
+    const staffById = new Map(allStaff.map(member => [member.id, member]));
+    const weekDateStrs = new Set(daysToProcess.map(d => DateUtils.formatDate(d)));
+    const assignedDaysByStaff = new Map<string, Set<string>>();
+
+    this.shifts().forEach(shift => {
+      if (!weekDateStrs.has(shift.date)) return;
+      if (!assignedDaysByStaff.has(shift.staffId)) {
+        assignedDaysByStaff.set(shift.staffId, new Set());
+      }
+      assignedDaysByStaff.get(shift.staffId)!.add(shift.date);
+    });
+
+    const markAssigned = (staffId: string, dateStr: string) => {
+      if (!assignedDaysByStaff.has(staffId)) {
+        assignedDaysByStaff.set(staffId, new Set());
+      }
+      assignedDaysByStaff.get(staffId)!.add(dateStr);
+    };
+
+    const getWeeklyAssignedCount = (staffId: string) => {
+      return assignedDaysByStaff.get(staffId)?.size ?? 0;
+    };
 
     daysToProcess.forEach(day => {
        const dateStr = DateUtils.formatDate(day);
 
-       // Filter shifts for this specific day to check coverage/overlaps
-       const dailyShifts = this.shifts().filter(s => s.date === dateStr);
+       // Filter shifts for this specific day to check coverage/overlaps        
+       const dailyShifts = this.shifts().filter(s => s.date === dateStr);       
+
+       const getAllShiftsForDay = () => [
+         ...dailyShifts,
+         ...newShifts.filter(s => s.date === dateStr)
+       ];
+
+       const getRoleCountForDay = (role: Role) => {
+         const activeStaffIds = new Set<string>();
+         getAllShiftsForDay().forEach(shift => {
+           const member = staffById.get(shift.staffId);
+           if (member && member.role === role) {
+             activeStaffIds.add(shift.staffId);
+           }
+         });
+         return activeStaffIds.size;
+       };
+
+       const getCandidatesForRole = (role: Role) => {
+         const dayShifts = getAllShiftsForDay();
+         return allStaff.filter(member => {
+           if (member.role !== role) return false;
+           const hasShiftToday = dayShifts.some(shift => shift.staffId === member.id);
+           if (hasShiftToday) return false;
+           return true;
+         }).sort((a, b) => {
+           const countDiff = getWeeklyAssignedCount(a.id) - getWeeklyAssignedCount(b.id);
+           if (countDiff !== 0) return countDiff;
+           return a.fullName.localeCompare(b.fullName);
+         });
+       };
+
+       // 0. Ensure daily minimum per role (configurable)
+       dailyMinimums.forEach(minimum => {
+         const currentCount = getRoleCountForDay(minimum.role);
+         if (currentCount >= minimum.minDaily) return;
+
+         const needed = minimum.minDaily - currentCount;
+         const candidates = getCandidatesForRole(minimum.role);
+
+         for (let i = 0; i < candidates.length && i < needed; i++) {
+           const cand = candidates[i];
+           newShifts.push({
+             id: crypto.randomUUID(),
+             staffId: cand.id,
+             date: dateStr,
+             start: cand.standardShiftStart || '08:00',
+             end: cand.standardShiftEnd || '16:00',
+             type: 'standard',
+             status: 'draft',
+             source: 'auto'
+           });
+           markAssigned(cand.id, dateStr);
+         }
+       });
 
        requirements.forEach(req => {
           const reqStart = DateUtils.timeToMinutes(req.start);
           const reqEnd = DateUtils.timeToMinutes(req.end);
+          const dayShifts = getAllShiftsForDay();
 
           // 1. Calculate current coverage for this requirement
-          const activeCount = dailyShifts.filter(s => {
+          const activeCount = dayShifts.filter(s => {
              // Does this shift overlap with the requirement?
              const sStart = DateUtils.timeToMinutes(s.start);
              const sEnd = DateUtils.timeToMinutes(s.end);
@@ -288,7 +398,7 @@ export class ShiftService {
              if (!overlap) return false;
 
              // Does the staff match the role?
-             const member = allStaff.find(m => m.id === s.staffId);
+             const member = staffById.get(s.staffId);
              return member && member.role === req.role;
           }).length;
 
@@ -299,19 +409,7 @@ export class ShiftService {
              // 2. Find Candidates: Correct Role + NO shift on this day (Strict "No Overlap" + "Empty Day" preference?)
              // User requirement: "asigne nada más a gente que no tenga un horario ya asignado ese día."
 
-             const candidates = allStaff.filter(s => {
-                if (s.role !== req.role) return false;
-
-                // Strict check: Person must have NO shifts on this day
-                const hasShiftToday = dailyShifts.some(shift => shift.staffId === s.id);
-                if (hasShiftToday) return false;
-
-                // Also check if they are already assigned in this batch (newShifts)
-                const assignedInBatch = newShifts.some(ns => ns.staffId === s.id && ns.date === dateStr);
-                if (assignedInBatch) return false;
-
-                return true;
-             });
+             const candidates = getCandidatesForRole(req.role);
 
              // Simple greedy assignment
              for (let i = 0; i < candidates.length && assigned < needed; i++) {
@@ -327,6 +425,7 @@ export class ShiftService {
                   source: 'auto'
                 });
                 assigned++;
+                markAssigned(cand.id, dateStr);
              }
           }
        });
