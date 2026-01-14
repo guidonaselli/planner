@@ -88,6 +88,10 @@ export class WeekViewComponent {
     return this.shiftService.holidays().some(h => h.date === dateStr);
   }
 
+  getDailyWarningCount(date: Date): number {
+    return this.shiftService.getDailyWarningCount(DateUtils.formatDate(date));
+  }
+
   // --- Interaction ---
   onCellClick(date: Date, staffId: string) {
     const newShift: Shift = {

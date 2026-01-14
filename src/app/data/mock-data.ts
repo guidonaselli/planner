@@ -80,14 +80,25 @@ function generateStaff(): StaffMember[] {
 
 const STAFF = generateStaff();
 
-const REQS: CoverageRequirement[] = ROLE_SPECS.filter(spec => spec.coverageStart && spec.coverageEnd)
-  .map((spec, index) => ({
-    id: `r${index + 1}`,
-    role: spec.role,
-    start: spec.coverageStart as string,
-    end: spec.coverageEnd as string,
-    minStaff: 1
-  }));
+const REQS: CoverageRequirement[] = [
+  { id: "r1", role: "coordinador", start: "00:00", end: "24:00", minStaff: 1 },
+  { id: "r2", role: "supervisor", start: "00:00", end: "08:00", minStaff: 1 },
+  { id: "r3", role: "supervisor", start: "08:00", end: "18:00", minStaff: 2 },
+  { id: "r4", role: "supervisor", start: "18:00", end: "24:00", minStaff: 1 },
+  { id: "r5", role: "lider tecnico/gerente", start: "07:00", end: "16:00", minStaff: 1 },
+  { id: "r6", role: "supervisor instalador 1 (interno)", start: "07:00", end: "16:00", minStaff: 1 },
+  { id: "r7", role: "supervisor instalador 2 (subcontratados)", start: "07:00", end: "16:00", minStaff: 1 },
+  { id: "r8", role: "supervisor de campo", start: "07:00", end: "16:00", minStaff: 1 },
+  { id: "r9", role: "tecnico instalador", start: "07:00", end: "16:00", minStaff: 3 },
+  { id: "r10", role: "tecnico instalador", start: "12:00", end: "13:00", minStaff: 4 },
+  { id: "r11", role: "tecnico de calle", start: "00:00", end: "24:00", minStaff: 2 },
+  { id: "r12", role: "tecnico de calle", start: "12:00", end: "13:00", minStaff: 3 },
+  { id: "r13", role: "encargado de laboratorio", start: "07:00", end: "16:00", minStaff: 1 },
+  { id: "r14", role: "empleado de laboratorio", start: "07:00", end: "16:00", minStaff: 2 },
+  { id: "r15", role: "empleado de laboratorio", start: "12:00", end: "14:00", minStaff: 3 },
+  { id: "r16", role: "soporte n1y n2", start: "08:00", end: "20:00", minStaff: 2 },
+  { id: "r17", role: "soporte n3", start: "08:00", end: "20:00", minStaff: 1 }
+];
 
 const DAILY_ROLE_MINIMUMS: DailyRoleMinimum[] = ROLE_SPECS.map(spec => ({
   role: spec.role,

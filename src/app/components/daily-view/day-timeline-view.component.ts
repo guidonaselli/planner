@@ -48,6 +48,7 @@ export class DayTimelineViewComponent {
   coverageTime = signal('');
   coverageStaffList = signal<StaffMember[]>([]);
   coverageBreakdown = signal<{ role: string, count: number }[]>([]);
+  coverageWarnings = signal<{ role: string, required: number, current: number, start: string, end: string }[]>([]);
 
   // Group Collapse State
   collapsedGroups = signal<Set<string>>(new Set());
@@ -278,11 +279,14 @@ export class DayTimelineViewComponent {
         });
      }
      this.coverageBreakdown.set(breakdown);
+     const dateStr = DateUtils.formatDate(this.shiftService.currentDate());
+     this.coverageWarnings.set(this.shiftService.getCoverageWarningsAt(dateStr, bucket.time));
      this.isCoverageDialogOpen.set(true);
   }
 
   closeCoverageDialog() {
     this.isCoverageDialogOpen.set(false);
+    this.coverageWarnings.set([]);
   }
 
   // --- Drag & Drop ---

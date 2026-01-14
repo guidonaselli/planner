@@ -94,9 +94,8 @@ export class ShiftService {
   dailyCoverage: Signal<any[]> = computed(() => {
     const buckets = [];
     const shifts = this.shiftsForCurrentDate();
-    // Use filtered staff for "Visual Coverage"?
-    // Usually coverage is global, but let's stick to "visible" coverage for now
-    const staffIds = new Set(this.filteredStaff().map(s => s.id));
+    const requirements = this.requirements();
+    const staffById = new Map(this.staff().map(member => [member.id, member]));
 
     // 288 buckets (5 mins) for granularity
     for (let i = 0; i < 288; i++) {
@@ -107,22 +106,105 @@ export class ShiftService {
       const roleCounts: Record<string, number> = {};
 
       shifts.forEach(shift => {
-        if (!staffIds.has(shift.staffId)) return;
         const start = DateUtils.timeToMinutes(shift.start);
         const end = DateUtils.timeToMinutes(shift.end);
 
         if (minutes >= start && minutes < end) {
-           const staff = this.staff().find(s => s.id === shift.staffId);
+           const staff = staffById.get(shift.staffId);
            if (staff) {
               count++;
               roleCounts[staff.role] = (roleCounts[staff.role] || 0) + 1;
            }
         }
       });
-      buckets.push({ time: minutes, timeStr, count, roleCounts });
+
+      let warningCount = 0;
+      requirements.forEach(req => {
+        const reqStart = DateUtils.timeToMinutes(req.start);
+        const reqEnd = DateUtils.timeToMinutes(req.end);
+        if (minutes < reqStart || minutes >= reqEnd) return;
+        const current = roleCounts[req.role] || 0;
+        if (current < req.minStaff) warningCount++;
+      });
+
+      buckets.push({ time: minutes, timeStr, count, roleCounts, warningCount });
     }
     return buckets;
   });
+
+  getCoverageWarningsAt(dateStr: string, minutes: number) {
+    const shifts = this.shifts().filter(s => s.date === dateStr);
+    const requirements = this.requirements();
+    const staffById = new Map(this.staff().map(member => [member.id, member]));
+
+    const roleCounts: Record<string, number> = {};
+    shifts.forEach(shift => {
+      const start = DateUtils.timeToMinutes(shift.start);
+      const end = DateUtils.timeToMinutes(shift.end);
+      if (minutes >= start && minutes < end) {
+        const staff = staffById.get(shift.staffId);
+        if (staff) {
+          roleCounts[staff.role] = (roleCounts[staff.role] || 0) + 1;
+        }
+      }
+    });
+
+    return requirements
+      .filter(req => {
+        const reqStart = DateUtils.timeToMinutes(req.start);
+        const reqEnd = DateUtils.timeToMinutes(req.end);
+        return minutes >= reqStart && minutes < reqEnd;
+      })
+      .map(req => ({
+        role: req.role,
+        required: req.minStaff,
+        current: roleCounts[req.role] || 0,
+        start: req.start,
+        end: req.end
+      }))
+      .filter(item => item.current < item.required);
+  }
+
+  getDailyWarningCount(dateStr: string, stepMinutes = 15) {
+    const shifts = this.shifts().filter(s => s.date === dateStr);
+    const requirements = this.requirements();
+    const staffById = new Map(this.staff().map(member => [member.id, member]));
+
+    const getRoleCountsAt = (minutes: number) => {
+      const roleCounts: Record<string, number> = {};
+      shifts.forEach(shift => {
+        const start = DateUtils.timeToMinutes(shift.start);
+        const end = DateUtils.timeToMinutes(shift.end);
+        if (minutes >= start && minutes < end) {
+          const staff = staffById.get(shift.staffId);
+          if (staff) {
+            roleCounts[staff.role] = (roleCounts[staff.role] || 0) + 1;
+          }
+        }
+      });
+      return roleCounts;
+    };
+
+    let warnings = 0;
+    requirements.forEach(req => {
+      const reqStart = DateUtils.timeToMinutes(req.start);
+      const reqEnd = DateUtils.timeToMinutes(req.end);
+      let hasShortage = false;
+
+      for (let minutes = reqStart; minutes < reqEnd; minutes += stepMinutes) {
+        const roleCounts = getRoleCountsAt(minutes);
+        const current = roleCounts[req.role] || 0;
+        if (current < req.minStaff) {
+          hasShortage = true;
+          break;
+        }
+      }
+
+      if (hasShortage) warnings++;
+    });
+
+    return warnings;
+  }
 
   // --- Actions ---
 

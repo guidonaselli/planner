@@ -14,6 +14,7 @@
         @for(day of weekDays(); track day) {
           <div class="day-column-header"
                [class.is-holiday]="isHoliday(day)">
+            @let warnings = getDailyWarningCount(day);
 
             <div class="day-info">
               <span class="day-name">{{ getDayName(day) }}</span>
@@ -28,9 +29,12 @@
 
             <!-- Daily Metrics (Coverage Score Placeholder) -->
             <div class="metrics-bar">
-               <div class="metric-track">
-                  <div class="metric-fill"></div>
+               <div class="metric-track" [class.has-warning]="warnings > 0">
+                  <div class="metric-fill" [class.warning]="warnings > 0"></div>
                </div>
+               @if(warnings > 0) {
+                 <span class="warning-chip">⚠ {{ warnings }}</span>
+               }
             </div>
           </div>
         }

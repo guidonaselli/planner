@@ -170,10 +170,24 @@
   opacity: 0.5;
   cursor: pointer;
   transition: opacity 0.2s;
+  position: relative;
 }
 .coverage-bucket:hover { opacity: 0.8; }
 .coverage-bucket.has-staff { background-color: var(--success); }
 .coverage-bucket.no-staff { background-color: var(--danger); }
+.coverage-bucket.has-warning { opacity: 0.9; }
+.coverage-bucket.has-warning::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid var(--warning);
+}
 
 /* Scroll Area */
 .scroll-area {

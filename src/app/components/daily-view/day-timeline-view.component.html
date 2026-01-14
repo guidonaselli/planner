@@ -55,6 +55,7 @@
            <div class="coverage-bucket"
                 [class.has-staff]="bucket.count > 0"
                 [class.no-staff]="bucket.count === 0"
+                [class.has-warning]="bucket.warningCount > 0"
                 [title]="getCoverageBucketTitle(bucket.timeStr)"
                 (click)="openCoverageDetails(bucket)">
            </div>
@@ -173,6 +174,7 @@
     [time]="coverageTime()"
     [staffList]="coverageStaffList()"
     [roleBreakdown]="coverageBreakdown()"
+    [warnings]="coverageWarnings()"
     (closeEvent)="closeCoverageDialog()">
   </app-coverage-details-dialog>
 

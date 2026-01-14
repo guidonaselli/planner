@@ -22,6 +22,12 @@ import { ShiftService } from '../../services/shift.service';
           <div class="time-header">
             <span class="material-symbols-outlined">schedule</span>
             <span class="time-label">{{ time }}</span>
+            <span class="status-pill"
+              [class.is-danger]="staffList.length === 0"
+              [class.is-warning]="staffList.length > 0 && warnings.length > 0"
+              [class.is-ok]="staffList.length > 0 && warnings.length === 0">
+              {{ staffList.length === 0 ? 'Sin cobertura' : (warnings.length > 0 ? 'Cobertura parcial' : 'Cobertura OK') }}
+            </span>
           </div>
 
           <div class="stats-summary">
@@ -54,6 +60,17 @@ import { ShiftService } from '../../services/shift.service';
                </li>
              </ul>
           </div>
+
+          @if(warnings.length > 0) {
+            <div class="warnings-card">
+              <h4>Advertencias</h4>
+              <ul>
+                @for(item of warnings; track item.role) {
+                  <li>Se requieren {{ item.required }} {{ item.role }} entre {{ item.start }}-{{ item.end }} (actual: {{ item.current }})</li>
+                }
+              </ul>
+            </div>
+          }
 
         </div>
 
@@ -105,6 +122,20 @@ import { ShiftService } from '../../services/shift.service';
        font-size: 1.25rem; font-weight: 600; color: var(--primary);
        margin-bottom: 16px;
     }
+    .status-pill {
+       margin-left: auto;
+       padding: 4px 10px;
+       border-radius: 999px;
+       font-size: 0.65rem;
+       font-weight: 700;
+       text-transform: uppercase;
+       letter-spacing: 0.04em;
+       background: #e2e8f0;
+       color: #475569;
+    }
+    .status-pill.is-danger { background: #fee2e2; color: #b91c1c; }
+    .status-pill.is-warning { background: #fef3c7; color: #b45309; }
+    .status-pill.is-ok { background: #dcfce7; color: #15803d; }
 
     .stats-summary { display: flex; gap: 16px; margin-bottom: 16px; }
     .stat-box {
@@ -139,6 +170,23 @@ import { ShiftService } from '../../services/shift.service';
     .staff-name { font-size: 0.875rem; font-weight: 500; }
     .staff-role { font-size: 0.75rem; color: var(--text-secondary); }
     .empty-state { font-size: 0.875rem; color: var(--text-secondary); font-style: italic; }
+    .warnings-card {
+      border: 1px solid #facc15;
+      background: #fefce8;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.8rem;
+      color: #92400e;
+    }
+    .warnings-card h4 {
+      margin: 0 0 6px 0;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #b45309;
+    }
+    .warnings-card ul { margin: 0; padding-left: 16px; }
+    .warnings-card li { margin-bottom: 4px; }
 
     .modal-footer {
       padding: 12px 16px; border-top: 1px solid var(--border-color);
@@ -155,6 +203,7 @@ export class CoverageDetailsDialogComponent {
   @Input() time = '';
   @Input() roleBreakdown: { role: string, count: number }[] = [];
   @Input() staffList: StaffMember[] = [];
+  @Input() warnings: { role: string, required: number, current: number, start: string, end: string }[] = [];
   @Output() closeEvent = new EventEmitter<void>();
 
   close() {
