@@ -111,15 +111,27 @@
 }
 
 .cursor-tooltip {
-  background-color: var(--danger);
+  background-color: #1e293b; /* Slate 800 */
   color: white;
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 6px;
   white-space: nowrap;
-  transform: translateY(-100%) translateY(-4px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transform: translateY(-100%) translateY(-8px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tooltip-time {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #f8fafc;
+}
+.tooltip-info {
+  font-weight: 400;
+  color: #cbd5e1;
 }
 
 /* Coverage Row */
@@ -156,7 +168,10 @@
   flex: 1;
   height: 100%;
   opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
+.coverage-bucket:hover { opacity: 0.8; }
 .coverage-bucket.has-staff { background-color: var(--success); }
 .coverage-bucket.no-staff { background-color: var(--danger); }
 

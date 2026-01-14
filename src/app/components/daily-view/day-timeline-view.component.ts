@@ -5,11 +5,13 @@ import { DateUtils } from '../../utils/date-utils';
 import { StaffMember, Shift } from '../../models/shift-planner.models';
 import { ShiftEditDialogComponent } from '../shift-edit-dialog/shift-edit-dialog.component';
 import { PersonDetailsDialogComponent } from '../person-details-dialog/person-details-dialog.component';
+import { CoverageDetailsDialogComponent } from '../coverage-details-dialog/coverage-details-dialog.component';
+import { RecurrenceConfig } from '../../models/recurrence.model';
 
 @Component({
   selector: 'app-day-timeline-view',
   standalone: true,
-  imports: [CommonModule, ShiftEditDialogComponent, PersonDetailsDialogComponent],
+  imports: [CommonModule, ShiftEditDialogComponent, PersonDetailsDialogComponent, CoverageDetailsDialogComponent],
   templateUrl: './day-timeline-view.component.html',
   styleUrls: ['./day-timeline-view.component.css']
 })
@@ -35,10 +37,17 @@ export class DayTimelineViewComponent {
   // Dialog State
   isDialogOpen = signal(false);
   selectedShift = signal<Shift | null>(null);
+  isNewEntry = signal(false);
 
   // Person Details State
   isPersonDialogOpen = signal(false);
   selectedPerson = signal<StaffMember | null>(null);
+
+  // Coverage Details State
+  isCoverageDialogOpen = signal(false);
+  coverageTime = signal('');
+  coverageStaffList = signal<StaffMember[]>([]);
+  coverageBreakdown = signal<{ role: string, count: number }[]>([]);
 
   // Group Collapse State
   collapsedGroups = signal<Set<string>>(new Set());
@@ -172,22 +181,79 @@ export class DayTimelineViewComponent {
       source: 'manual'
     };
 
+    // Mark as new for dialog logic
+    this.isNewEntry.set(true);
     this.openEditDialog(newShift, event);
   }
 
   getActiveStaffCountAtHover(): number {
     const time = this.hoverTime();
     if (!time) return 0;
+    return this.getStaffAtTime(time).length;
+  }
+
+  getStaffAtTime(time: string): StaffMember[] {
     const mins = DateUtils.timeToMinutes(time);
     const shifts = this.shiftService.shiftsForCurrentDate();
-    const staffIds = new Set(this.shiftService.filteredStaff().map(s => s.id));
+    const staffMembers = this.shiftService.filteredStaff();
+    const staffIds = new Set(staffMembers.map(s => s.id));
 
-    return shifts.filter(s => {
-      if (!staffIds.has(s.staffId)) return false;
+    const activeShiftStaffIds = new Set<string>();
+
+    shifts.forEach(s => {
+      if (!staffIds.has(s.staffId)) return;
       const start = DateUtils.timeToMinutes(s.start);
       const end = DateUtils.timeToMinutes(s.end);
-      return mins >= start && mins < end;
-    }).length;
+      if (mins >= start && mins < end) {
+         activeShiftStaffIds.add(s.staffId);
+      }
+    });
+
+    return staffMembers.filter(s => activeShiftStaffIds.has(s.id));
+  }
+
+  getReducedActiveStaffString(): string {
+     const staff = this.getStaffAtTime(this.hoverTime() || '00:00');
+     if (staff.length === 0) return 'Sin personal activo';
+
+     // Group by role for reduced view
+     const roleCounts: Record<string, number> = {};
+     staff.forEach(s => roleCounts[s.role] = (roleCounts[s.role] || 0) + 1);
+
+     return Object.entries(roleCounts)
+       .map(([role, count]) => `${count} ${this.shortenRole(role)}`)
+       .join(', ');
+  }
+
+  shortenRole(role: string): string {
+    const map: Record<string, string> = {
+      "Coordinador de técnicos": "Coord.",
+      "Técnico de campo": "Téc. Camp",
+      "Técnico laboratorio": "Téc. Lab",
+      "Operario monitoreo": "Op. Mon",
+      "Supervisor monitoreo": "Sup. Mon"
+    };
+    return map[role] || role;
+  }
+
+  openCoverageDetails(bucket: any) {
+     this.coverageTime.set(bucket.timeStr);
+     // Re-calculate details for this bucket time (bucket uses 5m, we can use bucket.timeStr)
+     const staff = this.getStaffAtTime(bucket.timeStr);
+     this.coverageStaffList.set(staff);
+
+     const breakdown: { role: string, count: number }[] = [];
+     if (bucket.roleCounts) {
+        Object.entries(bucket.roleCounts).forEach(([role, count]) => {
+           breakdown.push({ role, count: count as number });
+        });
+     }
+     this.coverageBreakdown.set(breakdown);
+     this.isCoverageDialogOpen.set(true);
+  }
+
+  closeCoverageDialog() {
+    this.isCoverageDialogOpen.set(false);
   }
 
   // --- Drag & Drop ---
@@ -292,6 +358,13 @@ export class DayTimelineViewComponent {
   openEditDialog(shift: Shift, event: MouseEvent) {
     if (this.isDragging()) return; // Don't open if dragging just finished
     event.stopPropagation();
+
+    // Check if we didn't set isNewEntry explicitly (e.g. from existing shift click)
+    const exists = this.shiftService.shifts().some(s => s.id === shift.id);
+    if (exists) {
+       this.isNewEntry.set(false);
+    }
+
     this.selectedShift.set(shift);
     this.isDialogOpen.set(true);
   }
@@ -299,9 +372,11 @@ export class DayTimelineViewComponent {
   closeDialog() {
     this.isDialogOpen.set(false);
     this.selectedShift.set(null);
+    this.isNewEntry.set(false);
   }
 
-  saveShift(data: Partial<Shift>) {
+  saveShift(eventData: { shift: Partial<Shift>, recurrence?: RecurrenceConfig }) {
+    const { shift: data, recurrence } = eventData;
     const current = this.selectedShift();
     if (current) {
       // Check if this is a new shift (not in store)
@@ -312,10 +387,56 @@ export class DayTimelineViewComponent {
       } else {
         // Create new
         const newShift = { ...current, ...data } as Shift;
-        this.shiftService.addShift(newShift);
+
+        // Handle Recurrence
+        if (recurrence && recurrence.active) {
+            this.handleRecurrence(newShift, recurrence);
+        } else {
+            this.shiftService.addShift(newShift);
+        }
       }
     }
     this.closeDialog();
+  }
+
+  handleRecurrence(baseShift: Shift, config: RecurrenceConfig) {
+      // Generate shifts based on config
+      // Start of week or current week context?
+      // Logic: "Assign to people in the whole week".
+      // We assume we populate the CURRENT week.
+      const currentWeekStart = DateUtils.getStartOfWeek(this.shiftService.currentDate());
+
+      const shiftsToAdd: Shift[] = [];
+
+      for (let i = 0; i < 7; i++) {
+         const dayDate = DateUtils.addDays(currentWeekStart, i); // Sun, Mon, Tue...
+         // Config.days index 0 = Sun?
+         // JS getDay(): 0=Sun.
+         // `daysOfWeek` in Dialog was ['D', 'L'...] so 0=Dom.
+         // `recurrence.days` is boolean array [Sun, Mon, Tue...]
+         const dayIndex = dayDate.getDay();
+
+         let shouldAdd = false;
+         if (config.mode === 'week') {
+            shouldAdd = true; // All days
+         } else {
+            shouldAdd = config.days[dayIndex];
+         }
+
+         if (shouldAdd) {
+            shiftsToAdd.push({
+               ...baseShift,
+               id: crypto.randomUUID(),
+               date: DateUtils.formatDate(dayDate),
+               status: 'draft'
+            });
+         }
+      }
+
+      // Batch add? Service has addShift (single).
+      // We should probably loop or add bulk add to service.
+      // For now loop.
+      shiftsToAdd.forEach(s => this.shiftService.addShift(s));
   }
 
   deleteShift(id: string) {
