@@ -37,7 +37,8 @@
         @if(hoverTime()) {
           <div class="hover-cursor" [style.left.%]="hoverX()">
             <div class="cursor-tooltip">
-              {{ hoverTime() }} | {{ getActiveStaffCountAtHover() }} activos
+              <div class="tooltip-time">{{ hoverTime() }}</div>
+              <div class="tooltip-info">{{ getReducedActiveStaffString() }}</div>
             </div>
           </div>
         }
@@ -54,7 +55,8 @@
            <div class="coverage-bucket"
                 [class.has-staff]="bucket.count > 0"
                 [class.no-staff]="bucket.count === 0"
-                [title]="bucket.timeStr + ': ' + bucket.count + ' staff'">
+                [title]="bucket.timeStr + ': ' + bucket.count + ' staff'"
+                (click)="openCoverageDetails(bucket)">
            </div>
          }
        </div>
@@ -154,6 +156,7 @@
   <app-shift-edit-dialog
     [isOpen]="isDialogOpen()"
     [shift]="selectedShift()"
+    [isNewEntry]="isNewEntry()"
     (closeEvent)="closeDialog()"
     (saveEvent)="saveShift($event)"
     (deleteEvent)="deleteShift($event)">
@@ -164,5 +167,13 @@
     [staff]="selectedPerson()"
     (closeEvent)="closePersonDialog()">
   </app-person-details-dialog>
+
+  <app-coverage-details-dialog
+    [isOpen]="isCoverageDialogOpen()"
+    [time]="coverageTime()"
+    [staffList]="coverageStaffList()"
+    [roleBreakdown]="coverageBreakdown()"
+    (closeEvent)="closeCoverageDialog()">
+  </app-coverage-details-dialog>
 
 </div>

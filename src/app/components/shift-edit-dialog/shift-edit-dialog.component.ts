@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Shift, ShiftType } from '../../models/shift-planner.models';
+import { RecurrenceConfig } from '../../models/recurrence.model';
 
 @Component({
   selector: 'app-shift-edit-dialog',
@@ -35,6 +36,43 @@ import { Shift, ShiftType } from '../../models/shift-planner.models';
                 <option value="overtime">Horas Extra</option>
               </select>
             </div>
+
+            <!-- Recurrence Section (Only for New Shifts) -->
+            @if(isNew) {
+               <div class="recurrence-section">
+                 <label class="section-label">Repetir</label>
+                 <div class="recurrence-options">
+                   <div class="radio-option">
+                     <input type="radio" name="recurrence" [value]="false" [ngModel]="recurrenceActive" (ngModelChange)="setRecurrence(false)">
+                     <span>No repetir</span>
+                   </div>
+                   <div class="radio-option">
+                     <input type="radio" name="recurrence" [value]="true" [ngModel]="recurrenceActive" (ngModelChange)="setRecurrence(true)">
+                     <span>Repetir...</span>
+                   </div>
+                 </div>
+
+                 @if(recurrenceActive) {
+                    <div class="recurrence-details">
+                       <select [(ngModel)]="recurrence.mode" class="form-input small">
+                          <option value="week">Toda la semana</option>
+                          <option value="custom">Días específicos</option>
+                       </select>
+
+                       @if(recurrence.mode === 'custom') {
+                          <div class="days-selector">
+                             @for(day of daysOfWeek; track $index) {
+                                <div class="day-check" [class.selected]="recurrence.days[$index]" (click)="toggleDay($index)">
+                                   {{ day }}
+                                </div>
+                             }
+                          </div>
+                       }
+                    </div>
+                 }
+               </div>
+            }
+
           </div>
 
           <div class="dialog-footer">
@@ -83,6 +121,31 @@ import { Shift, ShiftType } from '../../models/shift-planner.models';
     .form-group { display: flex; flex-direction: column; gap: 4px; }
     .form-group label { font-size: 0.75rem; font-weight: 600; color: #64748b; }
     .form-input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
+    .form-input.small { padding: 4px 8px; font-size: 0.875rem; }
+
+    .recurrence-section {
+       margin-top: 8px; padding-top: 12px; border-top: 1px dashed #cbd5e1;
+    }
+    .section-label { font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 8px; }
+    .recurrence-options { display: flex; gap: 16px; margin-bottom: 8px; }
+    .radio-option { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; cursor: pointer; }
+    .recurrence-details { display: flex; flex-direction: column; gap: 8px; }
+
+    .days-selector { display: flex; justify-content: space-between; gap: 4px; }
+    .day-check {
+       width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+       border: 1px solid #cbd5e1; border-radius: 4px;
+       font-size: 0.75rem; font-weight: 600; color: #64748b;
+       cursor: pointer;
+       transition: all 0.2s;
+    }
+    .day-check:hover {
+       border-color: #135bec;
+       color: #135bec;
+    }
+    .day-check.selected {
+       background-color: #135bec; color: white; border-color: #135bec;
+    }
 
     .dialog-footer {
       padding: 16px;
@@ -101,20 +164,50 @@ export class ShiftEditDialogComponent {
   @Input() isOpen = false;
   @Input() shift: Shift | null = null;
   @Output() closeEvent = new EventEmitter<void>();
-  @Output() saveEvent = new EventEmitter<Partial<Shift>>();
+  @Output() saveEvent = new EventEmitter<{ shift: Partial<Shift>, recurrence?: RecurrenceConfig }>();
   @Output() deleteEvent = new EventEmitter<string>();
 
   editData: Partial<Shift> = { start: '08:00', end: '16:00', type: 'standard' };
   isNew = true;
 
+  // Recurrence State
+  recurrenceActive = false;
+  recurrence: RecurrenceConfig = {
+    active: false,
+    mode: 'week',
+    days: [false, true, true, true, true, true, false] // Default Mon-Fri
+  };
+  daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S']; // Sun to Sat
+
   ngOnChanges() {
     if (this.shift) {
-      this.isNew = false;
+      this.isNew = this.isNewEntry;
       this.editData = { ...this.shift };
     } else {
       this.isNew = true;
       this.editData = { start: '08:00', end: '16:00', type: 'standard' };
     }
+
+    // Reset recurrence
+    this.recurrenceActive = false;
+    this.recurrence.active = false;
+  }
+
+  // To fix the isNew issue, I'll use the fact that I control the parent.
+  // I will assume for now that if I enable recurrence, it is treated as new logic.
+  // But wait, I need to know IF I should show the recurrence UI.
+  // I'll update `DayTimelineViewComponent` to pass `isNew`.
+  @Input() isNewEntry = false; // New input
+
+  setRecurrence(active: boolean) {
+     this.recurrenceActive = active;
+     this.recurrence.active = active;
+  }
+
+  toggleDay(index: number) {
+     const newDays = [...this.recurrence.days];
+     newDays[index] = !newDays[index];
+     this.recurrence.days = newDays;
   }
 
   close() {
@@ -122,7 +215,10 @@ export class ShiftEditDialogComponent {
   }
 
   save() {
-    this.saveEvent.emit(this.editData);
+    this.saveEvent.emit({
+       shift: this.editData,
+       recurrence: this.recurrenceActive ? this.recurrence : undefined
+    });
   }
 
   delete() {

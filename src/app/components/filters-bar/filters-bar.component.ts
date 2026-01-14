@@ -25,11 +25,9 @@ import { Role } from '../../models/shift-planner.models';
             type="date"
             [ngModel]="dateInputValue()"
             (ngModelChange)="onDateChange($event)"
-            class="date-input-hidden"
-            id="date-picker-trigger">
+            class="date-input-hidden">
           <label
             (click)="dateInput.showPicker()"
-            for="date-picker-trigger"
             class="date-text cursor-pointer">
             {{ formattedDate() }}
           </label>
@@ -160,6 +158,12 @@ import { Role } from '../../models/shift-planner.models';
       border-right: 1px solid var(--border-color);
       height: 24px;
       position: relative;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    .date-display:hover {
+      background-color: var(--bg-surface-hover);
     }
     .icon-primary {
       color: var(--primary);
@@ -172,13 +176,12 @@ import { Role } from '../../models/shift-planner.models';
       user-select: none;
     }
     .date-input-hidden {
+      visibility: hidden;
       position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      opacity: 0;
-      cursor: pointer;
-      z-index: 20; /* Ensure it is on top of label */
-      appearance: none;
-      -webkit-appearance: none;
+      width: 0;
+      height: 0;
+      top: 0;
+      left: 0;
     }
     /* Ensure the input covers the whole clickable area */
 
