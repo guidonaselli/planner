@@ -51,9 +51,9 @@ import { Role } from '../../models/shift-planner.models';
 
         @if (isRoleDropdownOpen()) {
           <div class="role-dropdown-menu">
-            <div class="role-option" *ngFor="let role of availableRoles" (click)="toggleRole(role)">
+           <div class="role-option" *ngFor="let role of availableRoles" (click)="toggleRole(role)">
                <input type="checkbox" [checked]="shiftService.filterRoles().includes(role)" (click)="$event.stopPropagation(); toggleRole(role)">
-               <span>{{ role }}</span>
+               <span>{{ shiftService.formatRole(role) }}</span>
             </div>
           </div>
           <!-- Backdrop to close -->
@@ -119,6 +119,7 @@ import { Role } from '../../models/shift-planner.models';
       align-items: center;
       gap: 16px;
       width: 100%;
+      flex-wrap: wrap;
     }
 
     .filter-group {
@@ -369,6 +370,29 @@ import { Role } from '../../models/shift-planner.models';
     }
     .switch-btn.active .switch-handle {
       transform: translateX(16px);
+    }
+
+    @media (max-width: 960px) {
+      .filters-bar {
+        gap: 12px;
+      }
+      .search-box {
+        max-width: 100%;
+        flex-basis: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .filter-group {
+        width: 100%;
+      }
+      .role-selector {
+        min-width: 0;
+      }
+      .toggle-group {
+        justify-content: space-between;
+        width: 100%;
+      }
     }
   `]
 })

@@ -74,7 +74,7 @@
                 [class.-rotate-90]="isGroupCollapsed(group.role)">
             expand_more
           </span>
-          <span class="group-name">{{ group.role }} ({{ group.members.length }})</span>
+          <span class="group-name">{{ shiftService.formatRole(group.role) }} ({{ group.members.length }})</span>
         </div>
         <div class="group-track-cell"></div>
       </div>
@@ -91,7 +91,7 @@
              <div class="resource-details">
                <p class="resource-name">{{ staff.fullName }}</p>
                <div class="resource-meta">
-                 <span class="role-text">{{ staff.role }}</span>
+                 <span class="role-text">{{ shiftService.formatRole(staff.role) }}</span>
                  <!-- Monthly hours (Mocked display) -->
                  <span class="hours-badge">{{ staff.monthlyHours }}h</span>
                </div>

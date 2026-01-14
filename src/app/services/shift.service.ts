@@ -30,7 +30,9 @@ export class ShiftService {
   filterActiveNow: WritableSignal<boolean> = signal(false);
   groupByRole: WritableSignal<boolean> = signal(true);
 
-  constructor() {}
+  constructor() {
+    this.normalizeStoredRoles();
+  }
 
   // --- Computed Signals ---
 
@@ -521,5 +523,34 @@ export class ShiftService {
       alert('No se encontraron huecos cubribles con personal libre disponible.');
     }
     return false;
+  }
+
+  formatRole(role: string): string {
+    const normalized = this.normalizeRole(role);
+    return normalized.replace(/(^|[\s\/(\-])([a-záéíóúñ])/g, (_match, sep, chr) => `${sep}${chr.toUpperCase()}`);
+  }
+
+  private normalizeRole(role: string): Role {
+    const cleaned = (role || '')
+      .toLowerCase()
+      .replace(/\\s+/g, ' ')
+      .trim();
+    return cleaned as Role;
+  }
+
+  private normalizeStoredRoles() {
+    this.staff.update(current => current.map(member => ({
+      ...member,
+      role: this.normalizeRole(member.role)
+    })));
+    this.requirements.update(current => current.map(req => ({
+      ...req,
+      role: this.normalizeRole(req.role)
+    })));
+    this.dailyRoleMinimums.update(current => current.map(min => ({
+      ...min,
+      role: this.normalizeRole(min.role)
+    })));
+    this.filterRoles.update(current => current.map(role => this.normalizeRole(role)));
   }
 }

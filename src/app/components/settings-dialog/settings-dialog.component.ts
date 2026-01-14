@@ -25,7 +25,10 @@ import { DailyRoleMinimum } from '../../models/shift-planner.models';
           <div class="dialog-body">
             @for(item of draftMinimums; track item.role) {
               <div class="role-row">
-                <span class="role-name">{{ item.role }}</span>
+                <div class="role-info">
+                  <span class="role-name">{{ shiftService.formatRole(item.role) }}</span>
+                  <span class="role-meta">Min diario</span>
+                </div>
                 <input
                   type="number"
                   min="0"
@@ -55,13 +58,14 @@ import { DailyRoleMinimum } from '../../models/shift-planner.models';
       z-index: 1200;
     }
     .dialog {
-      width: 440px;
+      width: min(92vw, 440px);
       background: var(--bg-surface);
       border-radius: 12px;
       box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      max-height: 80vh;
     }
     .dialog-header {
       padding: 16px;
@@ -69,6 +73,7 @@ import { DailyRoleMinimum } from '../../models/shift-planner.models';
       display: flex;
       align-items: center;
       justify-content: space-between;
+      background: linear-gradient(135deg, rgba(19, 91, 236, 0.08), rgba(59, 130, 246, 0.02));
     }
     .dialog-header h3 {
       margin: 0;
@@ -97,6 +102,9 @@ import { DailyRoleMinimum } from '../../models/shift-planner.models';
       display: flex;
       flex-direction: column;
       gap: 10px;
+      overflow-y: auto;
+      max-height: 55vh;
+      background: var(--bg-app);
     }
     .role-row {
       display: flex;
@@ -105,13 +113,23 @@ import { DailyRoleMinimum } from '../../models/shift-planner.models';
       gap: 12px;
       padding: 10px 12px;
       border-radius: 8px;
-      background: var(--bg-surface-hover);
+      background: var(--bg-surface);
       border: 1px solid var(--border-color);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    }
+    .role-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
     .role-name {
       font-size: 0.875rem;
       font-weight: 600;
       color: var(--text-primary);
+    }
+    .role-meta {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
     }
     .role-input {
       width: 80px;
@@ -151,7 +169,7 @@ import { DailyRoleMinimum } from '../../models/shift-planner.models';
   `]
 })
 export class SettingsDialogComponent {
-  private shiftService = inject(ShiftService);
+  shiftService = inject(ShiftService);
 
   @Input() isOpen = false;
   @Output() closeEvent = new EventEmitter<void>();

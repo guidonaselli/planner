@@ -86,8 +86,8 @@ import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.comp
     .shell-container {
       display: flex;
       flex-direction: column;
-      height: 100vh;
-      width: 100vw;
+      height: 100dvh;
+      width: 100%;
       background-color: var(--bg-app);
       overflow: hidden;
     }
@@ -106,6 +106,8 @@ import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.comp
       align-items: center;
       justify-content: space-between;
       padding: 16px 24px;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
     .title-section {
@@ -130,6 +132,7 @@ import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.comp
       display: flex;
       align-items: center;
       gap: 16px;
+      flex-wrap: wrap;
     }
 
     .divider { width: 1px; height: 24px; background: var(--border-color); }
@@ -164,6 +167,7 @@ import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.comp
     .action-buttons {
       display: flex;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     .btn-icon {
@@ -215,6 +219,38 @@ import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.comp
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      min-height: 0;
+    }
+
+    @media (max-width: 960px) {
+      .shell-container {
+        --sidebar-width: 180px;
+      }
+      .filters-container {
+        padding: 0 16px 16px 16px;
+      }
+      .header-top {
+        padding: 12px 16px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell-container {
+        --sidebar-width: 150px;
+        height: auto;
+        min-height: 100dvh;
+        overflow: visible;
+      }
+      .view-toggle {
+        width: 100%;
+      }
+      .actions-section {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .main-content {
+        overflow: visible;
+      }
     }
   `]
 })

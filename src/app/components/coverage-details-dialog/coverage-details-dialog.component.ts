@@ -40,7 +40,7 @@ import { ShiftService } from '../../services/shift.service';
           <div class="role-breakdown">
             <h4>Desglose por Rol</h4>
             <div *ngFor="let item of roleBreakdown" class="role-row">
-               <span class="role-name">{{ item.role }}</span>
+               <span class="role-name">{{ shiftService.formatRole(item.role) }}</span>
                <span class="role-count">{{ item.count }}</span>
             </div>
           </div>
@@ -52,7 +52,7 @@ import { ShiftService } from '../../services/shift.service';
                  <div class="avatar-sm">{{ s.fullName.charAt(0) }}</div>
                  <div class="staff-info">
                    <span class="staff-name">{{ s.fullName }}</span>
-                   <span class="staff-role">{{ s.role }}</span>
+                   <span class="staff-role">{{ shiftService.formatRole(s.role) }}</span>
                  </div>
                </li>
                <li *ngIf="staffList.length === 0" class="empty-state">
@@ -66,7 +66,7 @@ import { ShiftService } from '../../services/shift.service';
               <h4>Advertencias</h4>
               <ul>
                 @for(item of warnings; track item.role) {
-                  <li>Se requieren {{ item.required }} {{ item.role }} entre {{ item.start }}-{{ item.end }} (actual: {{ item.current }})</li>
+                  <li>Se requieren {{ item.required }} {{ shiftService.formatRole(item.role) }} entre {{ item.start }}-{{ item.end }} (actual: {{ item.current }})</li>
                 }
               </ul>
             </div>
@@ -100,7 +100,7 @@ import { ShiftService } from '../../services/shift.service';
     }
     .modal-content {
       background: var(--bg-surface);
-      width: 400px;
+      width: min(92vw, 400px);
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
       overflow: hidden;
@@ -199,6 +199,7 @@ import { ShiftService } from '../../services/shift.service';
   `]
 })
 export class CoverageDetailsDialogComponent {
+  shiftService = inject(ShiftService);
   @Input() isOpen = false;
   @Input() time = '';
   @Input() roleBreakdown: { role: string, count: number }[] = [];

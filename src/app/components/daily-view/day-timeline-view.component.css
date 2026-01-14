@@ -411,6 +411,20 @@
   border-radius: 4px;
 }
 
+@media (max-width: 640px) {
+  :host {
+    height: auto;
+    overflow: visible;
+  }
+  .timeline-container {
+    height: auto;
+  }
+  .scroll-area {
+    overflow: visible;
+    flex: unset;
+  }
+}
+
 /* Utils */
 .transform { transform-box: fill-box; }
 .-rotate-90 { transform: rotate(-90deg); }

@@ -1,6 +1,7 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StaffMember } from '../../models/shift-planner.models';
+import { ShiftService } from '../../services/shift.service';
 
 @Component({
   selector: 'app-person-details-dialog',
@@ -20,7 +21,7 @@ import { StaffMember } from '../../models/shift-planner.models';
                <div class="avatar-large">{{ staff.fullName.substring(0,2) }}</div>
                <div>
                  <h2 class="name">{{ staff.fullName }}</h2>
-                 <span class="role-badge">{{ staff.role }}</span>
+                 <span class="role-badge">{{ shiftService.formatRole(staff.role) }}</span>
                </div>
             </div>
 
@@ -56,7 +57,7 @@ import { StaffMember } from '../../models/shift-planner.models';
     .dialog {
       background: white;
       border-radius: 12px;
-      width: 360px;
+      width: min(92vw, 360px);
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
       overflow: hidden;
     }
@@ -104,6 +105,7 @@ import { StaffMember } from '../../models/shift-planner.models';
   `]
 })
 export class PersonDetailsDialogComponent {
+  shiftService = inject(ShiftService);
   @Input() isOpen = false;
   @Input() staff: StaffMember | null = null;
   @Output() closeEvent = new EventEmitter<void>();

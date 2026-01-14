@@ -129,7 +129,7 @@ import { RecurrenceConfig } from '../../models/recurrence.model';
     .dialog {
       background: white;
       border-radius: 8px;
-      width: 400px; /* Increased width */
+      width: min(92vw, 400px); /* Increased width */
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       display: flex;
       flex-direction: column;
@@ -202,7 +202,7 @@ import { RecurrenceConfig } from '../../models/recurrence.model';
       z-index: 1100;
     }
     .delete-modal {
-      width: 360px;
+      width: min(92vw, 360px);
       background: #fff;
       border-radius: 10px;
       padding: 16px;

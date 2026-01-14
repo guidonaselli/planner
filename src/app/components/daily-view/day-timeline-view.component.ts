@@ -263,7 +263,7 @@ export class DayTimelineViewComponent {
       "soporte n1y n2": "Soporte N1/2",
       "soporte n3": "Soporte N3"
     };
-    return map[role] || role;
+    return map[role] || this.shiftService.formatRole(role);
   }
 
   openCoverageDetails(bucket: any) {
