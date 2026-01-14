@@ -13,45 +13,86 @@ const NAMES = [
   "Gastón Roldán", "Marina Luján", "Santiago Prieto", "Belén Cordero", "Nahuel Latorre"
 ];
 
-function generateStaff(): StaffMember[] {
-  return NAMES.map((name, i) => {
-    let role: Role = "Operario monitoreo";
-    if (i < 5) role = "Coordinador de técnicos";
-    else if (i < 15) role = "Técnico de campo";
-    else if (i < 25) role = "Técnico laboratorio";
-    else if (i < 45) role = "Operario monitoreo";
-    else role = "Supervisor monitoreo";
+const ROLE_SPECS: {
+  area: string;
+  role: Role;
+  count: number;
+  coverageStart?: string;
+  coverageEnd?: string;
+  shiftHours?: number;
+}[] = [
+  { area: "CM", role: "coordinador", count: 2, coverageStart: "00:00", coverageEnd: "24:00", shiftHours: 12 },
+  { area: "CM", role: "supervisor", count: 5, coverageStart: "00:00", coverageEnd: "24:00" },
+  { area: "Tecnicos", role: "lider tecnico/gerente", count: 1, coverageStart: "07:00", coverageEnd: "16:00" },
+  { area: "Tecnicos", role: "supervisor instalador 1 (interno)", count: 1, coverageStart: "07:00", coverageEnd: "16:00" },
+  { area: "Tecnicos", role: "supervisor instalador 2 (subcontratados)", count: 1, coverageStart: "07:00", coverageEnd: "16:00" },
+  { area: "Tecnicos", role: "supervisor de campo", count: 1 },
+  { area: "Tecnicos", role: "tecnico instalador", count: 5 },
+  { area: "Tecnicos", role: "tecnico de calle", count: 10, coverageStart: "00:00", coverageEnd: "24:00" },
+  { area: "Laboratorio", role: "encargado de laboratorio", count: 1 },
+  { area: "Laboratorio", role: "empleado de laboratorio", count: 6 },
+  { area: "Soporte", role: "soporte n1y n2", count: 4 },
+  { area: "Soporte", role: "soporte n3", count: 2 }
+];
 
-    return {
-      id: `u${1000 + i}`,
-      fullName: name,
-      role,
-      homeOffice: Math.random() > 0.7,
-      phone: `+34 6${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
-      monthlyHours: 120 + Math.floor(Math.random() * 40),
-      standardShiftStart: "08:00",
-      standardShiftEnd: "16:00"
-    };
+function getDefaultShiftHours(spec: typeof ROLE_SPECS[number]) {
+  if (spec.shiftHours) return spec.shiftHours;
+  if (spec.coverageStart === "07:00" && spec.coverageEnd === "16:00") return 9;
+  return 8;
+}
+
+function getDefaultShiftRange(spec: typeof ROLE_SPECS[number]) {
+  const hours = getDefaultShiftHours(spec);
+  if (spec.coverageStart === "07:00" && spec.coverageEnd === "16:00") {
+    return { start: "07:00", end: "16:00" };
+  }
+  const start = "08:00";
+  const endHour = Math.min(24, 8 + hours);
+  const end = `${String(endHour).padStart(2, '0')}:00`;
+  return { start, end };
+}
+
+function generateStaff(): StaffMember[] {
+  const staff: StaffMember[] = [];
+  let idx = 0;
+
+  ROLE_SPECS.forEach(spec => {
+    const range = getDefaultShiftRange(spec);
+    for (let i = 0; i < spec.count; i++) {
+      const name = NAMES[idx % NAMES.length];
+      staff.push({
+        id: `u${1000 + idx}`,
+        fullName: name,
+        role: spec.role,
+        area: spec.area,
+        homeOffice: Math.random() > 0.7,
+        phone: `+34 6${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
+        monthlyHours: 120 + Math.floor(Math.random() * 40),
+        standardShiftStart: range.start,
+        standardShiftEnd: range.end
+      });
+      idx++;
+    }
   });
+
+  return staff;
 }
 
 const STAFF = generateStaff();
 
-const REQS: CoverageRequirement[] = [
-  { id: "r1", role: "Operario monitoreo", start: "00:00", end: "08:00", minStaff: 2 },
-  { id: "r2", role: "Operario monitoreo", start: "08:00", end: "16:00", minStaff: 5 },
-  { id: "r3", role: "Operario monitoreo", start: "16:00", end: "24:00", minStaff: 3 },
-  { id: "r4", role: "Supervisor monitoreo", start: "08:00", end: "18:00", minStaff: 1 },
-  { id: "r5", role: "Técnico de campo", start: "08:00", end: "17:00", minStaff: 3 }
-];
+const REQS: CoverageRequirement[] = ROLE_SPECS.filter(spec => spec.coverageStart && spec.coverageEnd)
+  .map((spec, index) => ({
+    id: `r${index + 1}`,
+    role: spec.role,
+    start: spec.coverageStart as string,
+    end: spec.coverageEnd as string,
+    minStaff: 1
+  }));
 
-const DAILY_ROLE_MINIMUMS: DailyRoleMinimum[] = [
-  { role: "Coordinador de técnicos", minDaily: 1 },
-  { role: "Técnico de campo", minDaily: 2 },
-  { role: "Técnico laboratorio", minDaily: 2 },
-  { role: "Operario monitoreo", minDaily: 4 },
-  { role: "Supervisor monitoreo", minDaily: 1 }
-];
+const DAILY_ROLE_MINIMUMS: DailyRoleMinimum[] = ROLE_SPECS.map(spec => ({
+  role: spec.role,
+  minDaily: 1
+}));
 
 const HOLIDAYS: Holiday[] = [
   { date: "2026-01-15", name: "Feriado Local" }
@@ -92,8 +133,8 @@ function generateShifts(staff: StaffMember[]): Shift[] {
       });
 
       // Split OT visual if strictly separating blocks (Advanced: for now just one block type)
-      // Let's add explicit OT blocks for some "Técnico de campo"
-      if (s.role === "Técnico de campo" && Math.random() > 0.8) {
+      // Let's add explicit OT blocks for some "tecnico instalador"
+      if (s.role === "tecnico instalador" && Math.random() > 0.8) {
          shifts.push({
             id: crypto.randomUUID(),
             staffId: s.id,

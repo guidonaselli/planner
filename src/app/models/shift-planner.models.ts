@@ -1,9 +1,16 @@
 export type Role =
-  | "Coordinador de técnicos"
-  | "Técnico de campo"
-  | "Técnico laboratorio"
-  | "Operario monitoreo"
-  | "Supervisor monitoreo";
+  | "coordinador"
+  | "supervisor"
+  | "lider tecnico/gerente"
+  | "supervisor instalador 1 (interno)"
+  | "supervisor instalador 2 (subcontratados)"
+  | "supervisor de campo"
+  | "tecnico instalador"
+  | "tecnico de calle"
+  | "encargado de laboratorio"
+  | "empleado de laboratorio"
+  | "soporte n1y n2"
+  | "soporte n3";
 
 export type ShiftType = "standard" | "exception" | "overtime";
 export type ShiftStatus = "draft" | "confirmed";
@@ -12,6 +19,7 @@ export interface StaffMember {
   id: string;
   fullName: string;
   role: Role;
+  area?: string;
   homeOffice: boolean; // Keep mainly for visual info if needed
   phone: string;
 

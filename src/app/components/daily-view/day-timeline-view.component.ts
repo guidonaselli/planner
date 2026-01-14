@@ -78,11 +78,18 @@ export class DayTimelineViewComponent {
 
     const groups: Record<string, StaffMember[]> = {};
     const rolesOrder = [
-      "Coordinador de técnicos",
-      "Técnico de campo",
-      "Técnico laboratorio",
-      "Operario monitoreo",
-      "Supervisor monitoreo"
+      "coordinador",
+      "supervisor",
+      "lider tecnico/gerente",
+      "supervisor instalador 1 (interno)",
+      "supervisor instalador 2 (subcontratados)",
+      "supervisor de campo",
+      "tecnico instalador",
+      "tecnico de calle",
+      "encargado de laboratorio",
+      "empleado de laboratorio",
+      "soporte n1y n2",
+      "soporte n3"
     ];
 
     staff.forEach(s => {
@@ -242,11 +249,18 @@ export class DayTimelineViewComponent {
 
   shortenRole(role: string): string {
     const map: Record<string, string> = {
-      "Coordinador de técnicos": "Coord.",
-      "Técnico de campo": "Téc. Camp",
-      "Técnico laboratorio": "Téc. Lab",
-      "Operario monitoreo": "Op. Mon",
-      "Supervisor monitoreo": "Sup. Mon"
+      "coordinador": "Coord.",
+      "supervisor": "Sup.",
+      "lider tecnico/gerente": "Lider",
+      "supervisor instalador 1 (interno)": "Sup. Inst 1",
+      "supervisor instalador 2 (subcontratados)": "Sup. Inst 2",
+      "supervisor de campo": "Sup. Campo",
+      "tecnico instalador": "Tec. Inst",
+      "tecnico de calle": "Tec. Calle",
+      "encargado de laboratorio": "Enc. Lab",
+      "empleado de laboratorio": "Emp. Lab",
+      "soporte n1y n2": "Soporte N1/2",
+      "soporte n3": "Soporte N3"
     };
     return map[role] || role;
   }

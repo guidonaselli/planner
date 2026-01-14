@@ -377,11 +377,18 @@ export class FiltersBarComponent {
 
   isRoleDropdownOpen = signal(false);
   availableRoles: Role[] = [
-    "Coordinador de técnicos",
-    "Técnico de campo",
-    "Técnico laboratorio",
-    "Operario monitoreo",
-    "Supervisor monitoreo"
+    "coordinador",
+    "supervisor",
+    "lider tecnico/gerente",
+    "supervisor instalador 1 (interno)",
+    "supervisor instalador 2 (subcontratados)",
+    "supervisor de campo",
+    "tecnico instalador",
+    "tecnico de calle",
+    "encargado de laboratorio",
+    "empleado de laboratorio",
+    "soporte n1y n2",
+    "soporte n3"
   ];
 
   formattedDate() {
